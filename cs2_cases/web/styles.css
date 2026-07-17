@@ -86,7 +86,7 @@ body.overlay-mode .content { display: none; }
   font-weight: 700; font-size: 14px; letter-spacing: 2px; color: #fff;
   text-transform: uppercase; white-space: nowrap;
 }
-.tabs { display: flex; gap: 2px; flex: 1 1 auto; min-width: 0; }
+.tabs { display: flex; flex-wrap: wrap; gap: 2px; flex: 1 1 auto; min-width: 0; }
 .tab {
   background: none; border: none; color: var(--muted); cursor: pointer;
   padding: 6px 10px; font-family: var(--font); white-space: nowrap;
@@ -451,3 +451,24 @@ body.overlay-mode .content { display: none; }
   letter-spacing: .5px; font-size: 14px; max-width: 80%;
 }
 .toast.err { border-left-color: var(--r-covert); }
+
+/* ---- friends / gifting ---- */
+.idbox { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; }
+.idbox code {
+  flex: 1; background: #0c1418; border: 1px solid var(--edge); padding: 8px 10px;
+  font-family: var(--font); font-size: 14px; letter-spacing: 1.5px; color: var(--gold);
+  overflow-wrap: anywhere;
+}
+.codebox {
+  width: 100%; background: #0c1418; border: 1px solid var(--edge); color: #cddded;
+  font-family: var(--font); font-size: 11px; padding: 8px; margin-bottom: 8px;
+  resize: vertical; overflow-wrap: anywhere;
+}
+.sent {
+  border: 1px solid var(--edge); border-left: 2px solid var(--gold);
+  padding: 8px 10px; margin-bottom: 6px;
+}
+.sent-name { font-size: 12px; color: #fff; font-weight: 600; overflow-wrap: anywhere; }
+.sent-meta { font-size: 10px; color: var(--muted); margin: 2px 0 6px; overflow-wrap: anywhere; }
+.cell .from { font-size: 9px; color: var(--gold); letter-spacing: .3px; overflow-wrap: anywhere; }
+.empty { color: var(--muted); font-size: 12px; line-height: 1.5; }

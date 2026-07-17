@@ -146,6 +146,7 @@
       + '<div class="bar"></div>'
       + '<div class="info"><div class="wpn">' + st + esc(entry.item.weapon) + "</div>"
       + '<div class="skn">' + esc(entry.item.skin || "—") + "</div>"
+      + (entry.from ? '<div class="from">from ' + esc(entry.from) + "</div>" : "")
       + '<div class="sub"><span>' + esc(entry.wear.name) + "</span>"
       + '<span class="val">$' + entry.value.toFixed(2) + "</span></div></div>"
       + (extra || "");
@@ -162,7 +163,7 @@
   // ---- views ---------------------------------------------------------------
   function setView(name) {
     if (name !== "store") _storeDetail = null;  // leaving store resets any preview
-    ["store", "inventory", "tradeup", "stats"].forEach(function (v) {
+    ["store", "inventory", "tradeup", "stats", "friends"].forEach(function (v) {
       $("#view-" + v).classList.toggle("hidden", v !== name);
     });
     document.querySelectorAll(".tab").forEach(function (t) {
@@ -180,6 +181,7 @@
     if (v === "store") renderStore();
     else if (v === "inventory") renderInventory();
     else if (v === "tradeup") renderTradeUp();
+    else if (v === "friends") renderFriends();
     else renderStats();
   }
 
@@ -460,6 +462,48 @@
     $("#inv-dups").onclick = function () { var u = duplicateUids(); if (u.length) cs2.send("sell_many", { uids: u }); };
     renderSelBar();
   }
+  function renderFriends() {
+    var s = window.__state, el = $("#view-friends");
+    var sent = s.sent_gifts || [];
+    el.innerHTML =
+      '<div class="section-title">Your Player ID<span class="note">give this to friends</span></div>'
+      + '<div class="idbox"><code id="my-id">' + esc(s.player_id || "—") + "</code>"
+      + '<button class="btn sec small" id="copy-id">Copy</button></div>'
+      + '<div class="section-title">Redeem a gift<span class="note">paste a code from a friend</span></div>'
+      + '<textarea id="redeem-box" class="codebox" rows="3" placeholder="CS2GIFT-1-…"></textarea>'
+      + '<button class="btn small" id="redeem-go">Redeem</button>'
+      + '<div class="section-title">Sent gifts<span class="note">' + sent.length + "</span></div>"
+      + (sent.length
+          ? sent.map(function (g, i) {
+              return '<div class="sent">'
+                + '<div class="sent-name">' + esc(g.name) + "</div>"
+                + '<div class="sent-meta">to ' + esc(g.to) + " · " + esc(g.date) + "</div>"
+                + '<button class="btn sec small copy-sent" data-i="' + i + '">Copy code</button>'
+                + "</div>";
+            }).join("")
+          : '<div class="empty">Gift a skin from your inventory and the code shows up here. '
+            + "It stays here forever, so you can always send it again.</div>");
+    $("#copy-id").onclick = function () { copyText(s.player_id || ""); };
+    $("#redeem-go").onclick = function () {
+      var v = $("#redeem-box").value.trim();
+      if (v) cs2.send("redeem", { code: v });
+    };
+    el.querySelectorAll(".copy-sent").forEach(function (b) {
+      b.onclick = function () { copyText(sent[Number(b.getAttribute("data-i"))].code); };
+    });
+  }
+
+  function copyText(text) {
+    // Anki's webview has no clipboard permission prompt, but execCommand always works.
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand("copy"); toast("Copied."); }
+    catch (e) { toast("Copy failed — select it by hand.", true); }
+    document.body.removeChild(ta);
+  }
+
   function renderSelBar() {
     var bar = $("#inv-selbar"); if (!bar) return;
     var n = invSelCount();
@@ -471,10 +515,17 @@
     bar.innerHTML =
       '<span class="count">' + n + " selected · $" + invSelValue().toFixed(2) + "</span>"
       + '<button class="btn sec small" id="sel-fav">' + (allFav ? "Unfavourite" : "Favourite") + "</button>"
+      + (n === 1 ? '<button class="btn sec small" id="sel-gift">Gift</button>' : "")
       + '<button class="btn danger small" id="sel-sell">Sell selected</button>'
       + '<button class="btn sec small" id="sel-clear">Clear</button>';
     $("#sel-fav").onclick = function () {
       cs2.send("favorite", { uids: Object.keys(_inv.sel).map(Number), value: !allFav });
+    };
+    var giftBtn = $("#sel-gift");
+    if (giftBtn) giftBtn.onclick = function () {
+      var uid = Number(Object.keys(_inv.sel)[0]);
+      var to = window.prompt("Your friend's Player ID (they'll find it in their Friends tab):");
+      if (to) cs2.send("gift", { uid: uid, to: to });
     };
     $("#sel-sell").onclick = function () { cs2.send("sell_many", { uids: Object.keys(_inv.sel).map(Number) }); };
     $("#sel-clear").onclick = function () { _inv.sel = {}; renderInventory(); };
@@ -716,6 +767,16 @@
         var msg = "Sold " + res.count + " skins for $" + res.amount.toFixed(2);
         if (res.protected) msg += " · " + res.protected + " favourite" + (res.protected > 1 ? "s" : "") + " kept";
         toast(msg);
+      }
+      if (action === "gift") {
+        _inv.sel = {};
+        copyText(res.code);
+        toast("Gift code for " + res.name + " copied — paste it to " + res.to + ".");
+        setView("friends");
+      }
+      if (action === "redeem") {
+        $("#redeem-box").value = "";
+        toast("Received " + res.item.name + " from " + res.item.from + "!");
       }
       if (action === "favorite") {
         toast((res.favorite ? "Favourited " : "Unfavourited ") + res.count + " skin" + (res.count > 1 ? "s" : ""));
