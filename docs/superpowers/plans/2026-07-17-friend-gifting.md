@@ -58,6 +58,7 @@ Old saves migrate for free: `store._merge_defaults()` already backfills any key 
   - `decode(code: str) -> Dict[str, Any]` — returns `{"n","to","fr","i"}` where `i` is `{"case_id","rarity","float","stattrak","item"}`
   - `check_redeemable(payload: Dict[str, Any], my_id: str, redeemed_nonces: Iterable[str]) -> None`
   - `normalize_id(value: str) -> str`
+  - `is_player_id(value: str) -> bool`
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -108,6 +109,14 @@ class PlayerIdTest(unittest.TestCase):
 
     def test_normalize_id_is_case_and_space_insensitive(self):
         self.assertEqual(gifting.normalize_id("  cs2-7f2a-9c4e \n"), "CS2-7F2A-9C4E")
+
+    def test_is_player_id_accepts_a_real_id(self):
+        self.assertTrue(gifting.is_player_id(gifting.new_player_id()))
+        self.assertTrue(gifting.is_player_id("  cs2-7f2a-9c4e  "))
+
+    def test_is_player_id_rejects_junk(self):
+        for bad in ("", "not-an-id", "CS2-7F2A", "CS2-ZZZZ-9C4E", "7F2A-9C4E"):
+            self.assertFalse(gifting.is_player_id(bad), bad)
 
 
 class EncodeDecodeTest(unittest.TestCase):
@@ -267,6 +276,11 @@ def normalize_id(value: str) -> str:
     return re.sub(r"\s+", "", str(value or "")).upper()
 
 
+def is_player_id(value: str) -> bool:
+    """True if ``value`` is shaped like a Player ID (after normalizing case/space)."""
+    return bool(_ID_RE.match(normalize_id(value)))
+
+
 def encode(entry: Dict[str, Any], sender_id: str, recipient_id: str,
            nonce: Optional[str] = None) -> str:
     """Pack an inventory entry into a code addressed to ``recipient_id``.
@@ -338,7 +352,7 @@ def check_redeemable(payload: Dict[str, Any], my_id: str,
 - [ ] **Step 4: Run tests to verify they pass**
 
 Run: `python3 -m unittest tests.test_gifting -v`
-Expected: PASS — 18 tests OK
+Expected: PASS — 20 tests OK
 
 - [ ] **Step 5: Verify the module stayed pure**
 
@@ -690,7 +704,7 @@ Append after `trade_up()` (~line 71):
         to_id = gifting.normalize_id(to_id)
         if not to_id:
             raise gifting.GiftError("Enter your friend's Player ID.")
-        if not gifting._ID_RE.match(to_id):
+        if not gifting.is_player_id(to_id):
             raise gifting.GiftError("That isn't a Player ID — it looks like CS2-7F2A-9C4E.")
         me = gifting.ensure_player_id(self.state)
         if to_id == me:
@@ -1099,4 +1113,4 @@ git commit -m "Document friend gifting; retire the global-market backlog item"
 
 **Type consistency:** `encode(entry, sender_id, recipient_id, nonce=None)` takes a whole entry — matches Task 3's `gifting.encode(entry, me, to_id)`. `decode()` → `{"n","to","fr","i"}` is consumed identically by `check_redeemable` (Task 1), `economy.receive_item` (Task 2, reads `payload["i"]` and `payload["fr"]`), and `Controller.redeem` (Task 3, reads `payload["n"]`). `_ID_RE` is defined in Task 1 and used by Task 3. `state_payload()` keys `player_id`/`sent_gifts` (Task 3) match `s.player_id`/`s.sent_gifts` in `renderFriends()` (Task 5). `entry["from"]` (Task 2) matches `res.item.from` (Task 5 Step 5) and `entry.from` (Task 5 Step 6).
 
-**One known coupling:** Task 3 uses `gifting._ID_RE`, a private name. Acceptable — same package, and the alternative (a public `is_player_id()`) is a wrapper with one caller. If a second caller ever appears, promote it.
+**Resolved before dispatch:** an earlier draft had Task 3 reach into `gifting._ID_RE`, a private name in another module. Task 1 now exports `is_player_id()` and Task 3 calls that instead.
