@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# macOS / tooling
+.DS_Store
+.playwright-mcp/
+
+# Build artifact — published via GitHub Releases, not committed
+dist/
+
+# Per-user runtime data — never commit (each install generates its own)
+cs2_cases/user_files/state.json
+cs2_cases/user_files/catalog.json
+cs2_cases/user_files/assets/images/
+*.corrupt
+*.part
+
+# NOTE: cs2_cases/user_files/assets/sounds/ and cs2_cases/web/fonts/ ARE committed —
+# they ship with the add-on.

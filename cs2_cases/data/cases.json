@@ -1,0 +1,100 @@
+{
+  "version": 1,
+  "note": "Bundled offline fallback dataset. base_value is virtual in-app currency, not real money. The optional online refresh replaces this with the full, current catalog plus images and sounds.",
+  "rarities": {
+    "consumer": {"name": "Consumer Grade", "color": "#b0c3d9", "odds": 0.0},
+    "uncommon": {"name": "Industrial Grade", "color": "#5e98d9", "odds": 0.0},
+    "mil_spec": {"name": "Mil-Spec", "color": "#4b69ff", "odds": 0.7992},
+    "restricted": {"name": "Restricted", "color": "#8847ff", "odds": 0.1598},
+    "classified": {"name": "Classified", "color": "#d32ce6", "odds": 0.0320},
+    "covert": {"name": "Covert", "color": "#eb4b4b", "odds": 0.0064},
+    "special": {"name": "Special", "color": "#ffd700", "odds": 0.0026}
+  },
+  "trade_up_order": ["consumer", "uncommon", "mil_spec", "restricted", "classified", "covert", "special"],
+  "wear_tiers": [
+    {"id": "fn", "name": "Factory New", "max": 0.07},
+    {"id": "mw", "name": "Minimal Wear", "max": 0.15},
+    {"id": "ft", "name": "Field-Tested", "max": 0.38},
+    {"id": "ww", "name": "Well-Worn", "max": 0.45},
+    {"id": "bs", "name": "Battle-Scarred", "max": 1.01}
+  ],
+  "stattrak_odds": 0.10,
+  "cases": [
+    {
+      "id": "clutch_case",
+      "name": "Clutch Case",
+      "price": 2.50,
+      "image": null,
+      "items": {
+        "mil_spec": [
+          {"id": "cc_p2000_urban_hazard", "weapon": "P2000", "skin": "Urban Hazard", "base_value": 0.20},
+          {"id": "cc_mp9_black_sand", "weapon": "MP9", "skin": "Black Sand", "base_value": 0.18},
+          {"id": "cc_p250_valence", "weapon": "P250", "skin": "Valence", "base_value": 0.22},
+          {"id": "cc_negev_dazzle", "weapon": "Negev", "skin": "Dazzle", "base_value": 0.15},
+          {"id": "cc_ssg08_turbo", "weapon": "SSG 08", "skin": "Turbo Peek", "base_value": 0.25},
+          {"id": "cc_r8_grip", "weapon": "R8 Revolver", "skin": "Grip", "base_value": 0.19},
+          {"id": "cc_xm1014_oxide", "weapon": "XM1014", "skin": "Oxide Blaze", "base_value": 0.21}
+        ],
+        "restricted": [
+          {"id": "cc_glock_moonrise", "weapon": "Glock-18", "skin": "Moonrise", "base_value": 1.10},
+          {"id": "cc_bizon_night_riot", "weapon": "PP-Bizon", "skin": "Night Riot", "base_value": 0.95},
+          {"id": "cc_nova_wild_six", "weapon": "Nova", "skin": "Wild Six", "base_value": 1.05},
+          {"id": "cc_mag7_swag7", "weapon": "MAG-7", "skin": "SWAG-7", "base_value": 0.90},
+          {"id": "cc_five_seven_flame_test", "weapon": "Five-SeveN", "skin": "Flame Test", "base_value": 1.20}
+        ],
+        "classified": [
+          {"id": "cc_awp_mortis", "weapon": "AWP", "skin": "Mortis", "base_value": 6.50},
+          {"id": "cc_ump_arctic_wolf", "weapon": "UMP-45", "skin": "Arctic Wolf", "base_value": 4.20},
+          {"id": "cc_m4a4_neo_noir", "weapon": "M4A4", "skin": "Neo-Noir", "base_value": 12.00}
+        ],
+        "covert": [
+          {"id": "cc_mp7_bloodsport", "weapon": "MP7", "skin": "Bloodsport", "base_value": 22.00},
+          {"id": "cc_usps_cortex", "weapon": "USP-S", "skin": "Cortex", "base_value": 18.00}
+        ],
+        "special": [
+          {"id": "cc_knife_gut_fade", "weapon": "★ Gut Knife", "skin": "Fade", "base_value": 190.00},
+          {"id": "cc_knife_falchion_slaughter", "weapon": "★ Falchion Knife", "skin": "Slaughter", "base_value": 320.00},
+          {"id": "cc_knife_bowie_doppler", "weapon": "★ Bowie Knife", "skin": "Doppler", "base_value": 410.00}
+        ]
+      }
+    },
+    {
+      "id": "fracture_case",
+      "name": "Fracture Case",
+      "price": 2.50,
+      "image": null,
+      "items": {
+        "mil_spec": [
+          {"id": "fc_ssg08_mainframe", "weapon": "SSG 08", "skin": "Mainframe 001", "base_value": 0.24},
+          {"id": "fc_pp_bizon_runic", "weapon": "PP-Bizon", "skin": "Runic", "base_value": 0.17},
+          {"id": "fc_tec9_brother", "weapon": "Tec-9", "skin": "Brother", "base_value": 0.28},
+          {"id": "fc_galil_connexion", "weapon": "Galil AR", "skin": "Connexion", "base_value": 0.20},
+          {"id": "fc_mp5_kitbash", "weapon": "MP5-SD", "skin": "Kitbash", "base_value": 0.30},
+          {"id": "fc_negev_ultralight", "weapon": "Negev", "skin": "Ultralight", "base_value": 0.14},
+          {"id": "fc_sg553_ol_rusty", "weapon": "SG 553", "skin": "Ol' Rusty", "base_value": 0.16}
+        ],
+        "restricted": [
+          {"id": "fc_p90_freight", "weapon": "P90", "skin": "Freight", "base_value": 0.85},
+          {"id": "fc_glock_vogue", "weapon": "Glock-18", "skin": "Vogue", "base_value": 3.40},
+          {"id": "fc_xm1014_entombed", "weapon": "XM1014", "skin": "Entombed", "base_value": 0.92},
+          {"id": "fc_mac10_allure", "weapon": "MAC-10", "skin": "Allure", "base_value": 0.88},
+          {"id": "fc_m4a4_tooth_fairy", "weapon": "M4A4", "skin": "Tooth Fairy", "base_value": 5.10}
+        ],
+        "classified": [
+          {"id": "fc_mp5_analog", "weapon": "MP5-SD", "skin": "Analog Input", "base_value": 3.80},
+          {"id": "fc_m4a4_tooth_fairy_c", "weapon": "M4A4", "skin": "The Coalition", "base_value": 4.60},
+          {"id": "fc_ssg08_mainframe_c", "weapon": "SG 553", "skin": "Cyberforce", "base_value": 6.20}
+        ],
+        "covert": [
+          {"id": "fc_ak47_legion_of_anubis", "weapon": "AK-47", "skin": "Legion of Anubis", "base_value": 9.50},
+          {"id": "fc_deagle_printstream", "weapon": "Desert Eagle", "skin": "Printstream", "base_value": 55.00}
+        ],
+        "special": [
+          {"id": "fc_knife_paracord_crimson", "weapon": "★ Paracord Knife", "skin": "Crimson Web", "base_value": 260.00},
+          {"id": "fc_knife_survival_forest", "weapon": "★ Survival Knife", "skin": "Forest DDPAT", "base_value": 150.00},
+          {"id": "fc_knife_nomad_fade", "weapon": "★ Nomad Knife", "skin": "Fade", "base_value": 470.00}
+        ]
+      }
+    }
+  ]
+}

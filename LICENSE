@@ -1,0 +1,43 @@
+MIT License — applies to the ADD-ON CODE ONLY
+
+Copyright (c) 2026 Alric
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+--------------------------------------------------------------------------------
+NOT COVERED BY THIS LICENSE
+--------------------------------------------------------------------------------
+
+This is an unofficial fan project, not affiliated with, endorsed by, or
+sponsored by Valve Corporation.
+
+The MIT license above covers only the original code in this repository. It does
+NOT cover, and grants no rights to, third-party assets included or downloaded:
+
+  * Counter-Strike / CS2 sounds (user_files/assets/sounds/) — © Valve Corporation.
+  * CS2 case and skin artwork, names, and marks (downloaded at runtime from
+    Valve/Steam CDN and cached locally) — © Valve Corporation.
+  * "Counter-Strike", "CS2", "StatTrak™" and related marks — trademarks of Valve.
+
+Those remain the property of Valve and are included here for personal,
+non-commercial use only. If you are Valve and want something removed, open an
+issue and it will be removed.
+
+Bundled font: Chakra Petch — SIL Open Font License 1.1 (see web/fonts/).
+Catalog and price data: ByMykel/CSGO-API and ByMykel/counter-strike-price-tracker.

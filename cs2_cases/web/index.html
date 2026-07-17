@@ -1,0 +1,38 @@
+<style>/*__CSS__*/</style>
+
+<div id="app">
+  <header class="topbar">
+    <nav class="tabs">
+      <button class="tab active" data-view="store">Cases</button>
+      <button class="tab" data-view="inventory">Inventory</button>
+      <button class="tab" data-view="tradeup">Trade Up</button>
+      <button class="tab" data-view="stats">Stats</button>
+    </nav>
+    <div class="balance"><span class="cur">$</span><span id="balance">0.00</span></div>
+  </header>
+
+  <main class="content">
+    <section id="view-store" class="view"></section>
+    <section id="view-inventory" class="view hidden"></section>
+    <section id="view-tradeup" class="view hidden"></section>
+    <section id="view-stats" class="view hidden"></section>
+  </main>
+
+  <div id="opening" class="overlay hidden">
+    <div class="screenglow" id="screenglow"></div>
+    <div class="opening-inner">
+      <div class="reel-viewport">
+        <div class="reel-strip" id="reel"></div>
+        <div class="marker"><span class="tri top"></span><span class="tri bot"></span></div>
+        <div class="fade fade-left"></div>
+        <div class="fade fade-right"></div>
+      </div>
+      <div class="reveal hidden" id="reveal"></div>
+    </div>
+    <div class="goldflash" id="goldflash"></div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+</div>
+
+<script>//__JS__</script>
