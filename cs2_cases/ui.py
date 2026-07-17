@@ -162,13 +162,14 @@ def _reload_panel():
 
 
 def toggle_panel(*_args):
-    if _get_controller() is None:
+    c = _get_controller()
+    if c is None:
         return
     _ensure_dock()
     if _dock.isVisible():
         _dock.hide()
     else:
-        controller.claim_daily()  # opening the market also drops today's free case
+        c.claim_daily()  # opening the market also drops today's free case
         _reload_panel()           # rebuild with fresh balance/inventory
         if _dock.isFloating():   # snap a popped-out panel back into the sidebar
             _dock.setFloating(False)
