@@ -463,13 +463,26 @@ class GiftingEconomyTest(unittest.TestCase):
         self.assertLess(entry["value"], 100.0)
         self.assertEqual(entry["value"], self.drop["value"])
 
-    def test_receive_falls_back_to_the_embedded_item_for_an_unknown_case(self):
-        # friend is on the starter set and has never seen this case
-        payload = self._payload(case_id="no_such_case")
+    def test_a_forged_case_id_cannot_dodge_local_prices(self):
+        # case_id is sender-supplied and unsigned; naming a case the recipient doesn't
+        # have must not drop them through to the sender's inflated embedded copy
+        payload = self._payload({"base_value": 9999.0}, case_id="no_such_case")
         recipient = economy.new_state()
         entry = economy.receive_item(recipient, self.data, payload)
-        self.assertEqual(entry["item"]["id"], payload["i"]["item"]["id"])
-        self.assertGreaterEqual(entry["value"], 0.0)
+        self.assertEqual(entry["value"], self.drop["value"])
+
+    def test_receive_falls_back_to_the_embedded_item_for_an_unknown_skin(self):
+        # friend is on a fuller catalog: this skin genuinely isn't in ours, so the
+        # sender's copy is all we have. Trust-based by construction — assert we at
+        # least reconstruct it faithfully rather than dropping the gift.
+        payload = self._payload({"id": "skin-not-in-our-catalog", "base_value": 4.0,
+                                 "prices": {}})
+        recipient = economy.new_state()
+        entry = economy.receive_item(recipient, self.data, payload)
+        self.assertEqual(entry["item"]["id"], "skin-not-in-our-catalog")
+        expected = unboxing.value_for(payload["i"]["item"], entry["wear"]["id"],
+                                      entry["stattrak"])
+        self.assertEqual(entry["value"], expected)
 
     def test_receive_derives_wear_from_float(self):
         payload = self._payload()
@@ -510,13 +523,17 @@ In `cs2_cases/economy.py`, append after `set_favorite()` (~line 202):
 ```python
 # --- gifting ---------------------------------------------------------------
 
-def _catalog_item(data: Dict[str, Any], case_id: str,
-                  item_id: str) -> Optional[Dict[str, Any]]:
+def _catalog_item(data: Dict[str, Any], item_id: str) -> Optional[Dict[str, Any]]:
     """The recipient's own copy of a skin, whose prices are authoritative for them.
-    Returns None when they don't have that case (e.g. still on the starter set)."""
+
+    Searches the whole catalog by item id rather than inside the case the gift claims
+    to come from: the case_id is sender-supplied and unsigned, so trusting it would let
+    a forged one miss the lookup and fall through to the sender's embedded prices.
+    Returns None only when the recipient genuinely lacks the skin (e.g. they are still
+    on the bundled starter set), which is the one case where the sender's copy is all
+    there is to go on.
+    """
     for case in data.get("cases", []):
-        if case["id"] != case_id:
-            continue
         for pool in case.get("items", {}).values():
             for item in pool:
                 if item.get("id") == item_id:
@@ -546,7 +563,7 @@ def receive_item(state: Dict[str, Any], data: Dict[str, Any],
     what a gift is worth.
     """
     gift = payload["i"]
-    item = _catalog_item(data, gift["case_id"], gift["item"].get("id")) or gift["item"]
+    item = _catalog_item(data, gift["item"].get("id")) or gift["item"]
     float_value = float(gift["float"])
     wear = unboxing.wear_tier(float_value, data["wear_tiers"])
     stattrak = bool(gift["stattrak"])
