@@ -249,15 +249,19 @@ def sell_items(
             "count": sold, "protected": protected}
 
 
-# --- gifting -----------------------------------------------------------
+# --- gifting ---------------------------------------------------------------
 
-def _catalog_item(data: Dict[str, Any], case_id: str,
-                  item_id: str) -> Optional[Dict[str, Any]]:
+def _catalog_item(data: Dict[str, Any], item_id: str) -> Optional[Dict[str, Any]]:
     """The recipient's own copy of a skin, whose prices are authoritative for them.
-    Returns None when they don't have that case (e.g. still on the starter set)."""
+
+    Searches the whole catalog by item id rather than inside the case the gift claims
+    to come from: the case_id is sender-supplied and unsigned, so trusting it would let
+    a forged one miss the lookup and fall through to the sender's embedded prices.
+    Returns None only when the recipient genuinely lacks the skin (e.g. they are still
+    on the bundled starter set), which is the one case where the sender's copy is all
+    there is to go on.
+    """
     for case in data.get("cases", []):
-        if case["id"] != case_id:
-            continue
         for pool in case.get("items", {}).values():
             for item in pool:
                 if item.get("id") == item_id:
@@ -278,8 +282,11 @@ def gift_item(state: Dict[str, Any], uid: int) -> Dict[str, Any]:
     return state["inventory"].pop(idx)
 
 
-def receive_item(state: Dict[str, Any], data: Dict[str, Any],
-                 payload: Dict[str, Any]) -> Dict[str, Any]:
+def receive_item(
+    state: Dict[str, Any],
+    data: Dict[str, Any],
+    payload: Dict[str, Any],
+) -> Dict[str, Any]:
     """Reconstruct a gifted skin into the inventory.
 
     Wear, value and name are recomputed here from the float against *this* player's
@@ -287,7 +294,7 @@ def receive_item(state: Dict[str, Any], data: Dict[str, Any],
     what a gift is worth.
     """
     gift = payload["i"]
-    item = _catalog_item(data, gift["case_id"], gift["item"].get("id")) or gift["item"]
+    item = _catalog_item(data, gift["item"].get("id")) or gift["item"]
     float_value = float(gift["float"])
     wear = unboxing.wear_tier(float_value, data["wear_tiers"])
     stattrak = bool(gift["stattrak"])

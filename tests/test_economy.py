@@ -7,7 +7,7 @@ import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from cs2_cases import economy
+from cs2_cases import economy, unboxing
 
 
 def load_dataset():
@@ -403,13 +403,26 @@ class GiftingEconomyTest(unittest.TestCase):
         self.assertLess(entry["value"], 100.0)
         self.assertEqual(entry["value"], self.drop["value"])
 
-    def test_receive_falls_back_to_the_embedded_item_for_an_unknown_case(self):
-        # friend is on the starter set and has never seen this case
-        payload = self._payload(case_id="no_such_case")
+    def test_a_forged_case_id_cannot_dodge_local_prices(self):
+        # case_id is sender-supplied and unsigned; naming a case the recipient doesn't
+        # have must not drop them through to the sender's inflated embedded copy
+        payload = self._payload({"base_value": 9999.0}, case_id="no_such_case")
         recipient = economy.new_state()
         entry = economy.receive_item(recipient, self.data, payload)
-        self.assertEqual(entry["item"]["id"], payload["i"]["item"]["id"])
-        self.assertGreaterEqual(entry["value"], 0.0)
+        self.assertEqual(entry["value"], self.drop["value"])
+
+    def test_receive_falls_back_to_the_embedded_item_for_an_unknown_skin(self):
+        # friend is on a fuller catalog: this skin genuinely isn't in ours, so the
+        # sender's copy is all we have. Trust-based by construction — assert we at
+        # least reconstruct it faithfully rather than dropping the gift.
+        payload = self._payload({"id": "skin-not-in-our-catalog", "base_value": 4.0,
+                                 "prices": {}})
+        recipient = economy.new_state()
+        entry = economy.receive_item(recipient, self.data, payload)
+        self.assertEqual(entry["item"]["id"], "skin-not-in-our-catalog")
+        expected = unboxing.value_for(payload["i"]["item"], entry["wear"]["id"],
+                                      entry["stattrak"])
+        self.assertEqual(entry["value"], expected)
 
     def test_receive_derives_wear_from_float(self):
         payload = self._payload()
