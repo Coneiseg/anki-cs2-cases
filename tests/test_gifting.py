@@ -251,6 +251,43 @@ class DecodeShapeTest(unittest.TestCase):
         p["i"]["item"]["prices"] = {"ft": 0.0, "st_ft": 27.57}
         self.assertEqual(gifting.decode(self._code_for(p))["n"], "deadbeef")
 
+    def test_rejects_prices_beyond_the_plausible_domain(self):
+        # merely-large finite values overflow to inf once value_for() applies the
+        # StatTrak premium; the priciest real skin is ~$2,212
+        for build in (lambda p: p["i"]["item"].__setitem__("base_value", 1.7e308),
+                      lambda p: p["i"]["item"].__setitem__("prices", {"ft": 1e308}),
+                      lambda p: p["i"]["item"].__setitem__("base_value", gifting.MAX_MONEY + 1)):
+            p = self._valid()
+            build(p)
+            with self.assertRaises(gifting.GiftError):
+                gifting.decode(self._code_for(p))
+
+    def test_rejects_negative_prices(self):
+        # a negative price would drain the recipient's balance on sale
+        for build in (lambda p: p["i"]["item"].__setitem__("base_value", -1.0),
+                      lambda p: p["i"]["item"].__setitem__("prices", {"ft": -1e9})):
+            p = self._valid()
+            build(p)
+            with self.assertRaises(gifting.GiftError):
+                gifting.decode(self._code_for(p))
+
+    def test_accepts_the_priciest_real_skin(self):
+        # guard against a bound set too tight: a StatTrak Butterfly Knife really is $2,212
+        p = self._valid()
+        p["i"]["item"]["prices"] = {"mw": 2212.09, "st_mw": 2212.09}
+        self.assertEqual(gifting.decode(self._code_for(p))["n"], "deadbeef")
+
+    def test_rejects_wear_floats_outside_zero_to_one(self):
+        for bad in (-0.5, 1.5, -1e6):
+            p = self._valid(); p["i"]["float"] = bad
+            with self.assertRaises(gifting.GiftError):
+                gifting.decode(self._code_for(p))
+
+    def test_accepts_wear_floats_at_the_boundaries(self):
+        for ok in (0, 0.0, 1.0, 0.9999):
+            p = self._valid(); p["i"]["float"] = ok
+            self.assertEqual(gifting.decode(self._code_for(p))["n"], "deadbeef")
+
 
 class CheckRedeemableTest(unittest.TestCase):
     def setUp(self):

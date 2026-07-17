@@ -1,9 +1,12 @@
 """Tests for the orchestration controller. Pure Python, no Anki import required."""
+import base64
+import binascii
 import json
 import os
 import sys
 import tempfile
 import unittest
+import zlib
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -164,6 +167,43 @@ class GiftingControllerTest(unittest.TestCase):
         payload = self.a.state_payload()
         self.assertIn("player_id", payload)
         self.assertIn("sent_gifts", payload)
+
+    def _crafted_code(self, item, to_id, float_value=0.01, stattrak=True):
+        """A hand-built code: real codes are unsigned, so anyone can forge one."""
+        payload = {"n": "craft", "to": to_id, "fr": "CS2-1111-1111",
+                   "i": {"case_id": "c", "rarity": "mil_spec", "float": float_value,
+                         "stattrak": stattrak, "item": item}}
+        raw = json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8")
+        body = base64.urlsafe_b64encode(zlib.compress(raw, 9)).decode("ascii").rstrip("=")
+        crc = format(binascii.crc32(raw) & 0xFFFFFFFF, "08x")
+        return "CS2GIFT-1-%s-%s" % (body, crc)
+
+    def test_redeem_rejects_crafted_values_rather_than_crashing(self):
+        # a crafted code must surface as a GiftError the UI can toast, never as a raw
+        # exception (Anki turns those into an error dialog) and never as inf balance
+        for item in ({"id": "x", "base_value": 1.7e308},
+                     {"id": "x", "prices": {"fn": 1e308}},
+                     {"id": "x", "prices": {"fn": -1e9}},
+                     {"id": "x", "base_value": 10 ** 400},
+                     {"id": "x", "prices": {"fn": float("inf")}},
+                     {}):
+            code = self._crafted_code(item, self.b.player_id())
+            with self.assertRaises(gifting.GiftError):
+                self.b.redeem(code)
+        self.assertEqual(self.b.state["inventory"], [])
+        self.assertEqual(self.b.state["balance"], 0.0)
+
+    def test_redeem_works_through_the_starter_set_fallback(self):
+        # the one path where the sender's embedded item is trusted: recipient's catalog
+        # doesn't have the skin at all
+        self.b.catalog = json.loads(json.dumps(load_dataset()))
+        for case in self.b.catalog["cases"]:
+            case["items"] = {k: [] for k in case["items"]}
+        res = self.a.gift(self.uid, self.b.player_id())
+        got = self.b.redeem(res["code"])
+        self.assertEqual(len(self.b.state["inventory"]), 1)
+        self.assertGreaterEqual(got["item"]["value"], 0.0)
+        self.assertLess(got["item"]["value"], gifting.MAX_MONEY)
 
 
 if __name__ == "__main__":

@@ -131,9 +131,14 @@ def _check_shape(payload: Any) -> None:
             raise GiftError("That gift code is corrupted.")
     if not isinstance(gift.get("stattrak"), bool):
         raise GiftError("That gift code is corrupted.")
-    if not _is_number(gift.get("float")):
+    if not _is_wear_float(gift.get("float")):
         raise GiftError("That gift code is corrupted.")
     _check_item(gift.get("item"))
+
+
+# Generous by ~450x: the priciest thing in the real catalog is a StatTrak Butterfly
+# Knife at ~$2,212. Anything above this is a crafted code, not a skin.
+MAX_MONEY = 1_000_000.0
 
 
 def _is_number(value: Any) -> bool:
@@ -142,8 +147,7 @@ def _is_number(value: Any) -> bool:
     Type alone is not enough. Python ints are unbounded and JSON caps nothing, so
     10**400 is an ordinary-looking integer that raises OverflowError inside float().
     json.loads also accepts the non-standard NaN/Infinity literals, which coerce fine
-    and then silently poison a value — an Infinity price sells for an infinite balance
-    that no later play can undo.
+    and then silently poison a value.
     """
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         return False
@@ -151,6 +155,23 @@ def _is_number(value: Any) -> bool:
         return math.isfinite(float(value))
     except OverflowError:
         return False
+
+
+def _is_money(value: Any) -> bool:
+    """A price the engine can safely do arithmetic on.
+
+    Finite is not enough: value_for() multiplies by the StatTrak premium, so a merely
+    large 1e308 overflows to inf, round() preserves it, and selling the gift writes an
+    infinite balance no later play can undo. Bound the magnitude to the plausible domain
+    instead, and reject negatives, which would drain the recipient's balance instead.
+    """
+    return _is_number(value) and 0.0 <= float(value) <= MAX_MONEY
+
+
+def _is_wear_float(value: Any) -> bool:
+    """A wear float. Real ones are always in [0, 1]; outside it wear_tier() silently
+    mis-tiers rather than failing, so reject it here where we can say why."""
+    return _is_number(value) and 0.0 <= float(value) <= 1.0
 
 
 def _check_item(item: Any) -> None:
@@ -164,7 +185,7 @@ def _check_item(item: Any) -> None:
     """
     if not isinstance(item, dict) or not item.get("id"):
         raise GiftError("That gift code is corrupted.")
-    if "base_value" in item and not _is_number(item["base_value"]):
+    if "base_value" in item and not _is_money(item["base_value"]):
         raise GiftError("That gift code is corrupted.")
     prices = item.get("prices")
     if prices is None:
@@ -172,7 +193,7 @@ def _check_item(item: Any) -> None:
     if not isinstance(prices, dict):
         raise GiftError("That gift code is corrupted.")
     for key, value in prices.items():
-        if not isinstance(key, str) or not _is_number(value):
+        if not isinstance(key, str) or not _is_money(value):
             raise GiftError("That gift code is corrupted.")
 
 
