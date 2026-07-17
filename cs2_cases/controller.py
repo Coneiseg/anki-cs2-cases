@@ -73,10 +73,18 @@ class Controller:
     # --- gifting ------------------------------------------------------------
 
     def player_id(self) -> str:
-        """This save's routing id, minted on first use and then stable."""
-        pid = gifting.ensure_player_id(self.state)
-        self._save()
-        return pid
+        """This save's routing id, minted on first use and then stable.
+
+        Every caller goes through here rather than gifting.ensure_player_id() directly,
+        so a freshly minted id is never left unsaved. state_payload() calls it too: a
+        player who wants to *receive* their first gift needs an id to hand out before
+        they have ever sent one, so minting only on the gift/redeem paths would show
+        them an empty id exactly when they need it.
+        """
+        if not self.state.get("player_id"):
+            gifting.ensure_player_id(self.state)
+            self._save()
+        return self.state["player_id"]
 
     def gift(self, uid: int, to_id: str) -> Dict[str, Any]:
         """Turn a skin into a code addressed to a friend. The item leaves the
@@ -86,7 +94,7 @@ class Controller:
             raise gifting.GiftError("Enter your friend's Player ID.")
         if not gifting.is_player_id(to_id):
             raise gifting.GiftError("That isn't a Player ID — it looks like CS2-7F2A-9C4E.")
-        me = gifting.ensure_player_id(self.state)
+        me = self.player_id()
         if to_id == me:
             raise gifting.GiftError("That's your own Player ID.")
         entry = economy.gift_item(self.state, int(uid))   # validates favourite/uid first
@@ -99,7 +107,10 @@ class Controller:
         return {"code": code, "name": entry["name"], "to": to_id}
 
     def redeem(self, code: str) -> Dict[str, Any]:
-        me = gifting.ensure_player_id(self.state)
+        """Turn a friend's code back into a skin. Validates fully before mutating, and
+        records the nonce only once the item is safely in, so a partial failure can
+        neither duplicate nor lose the gift."""
+        me = self.player_id()
         payload = gifting.decode(code)
         gifting.check_redeemable(payload, me, self.state.get("redeemed_nonces", []))
         entry = economy.receive_item(self.state, self.catalog, payload)
@@ -119,7 +130,7 @@ class Controller:
             "inventory_count": len(inventory),
             "history": list(reversed(self.state.get("history", []))),  # newest first
             "free_cases": list(self.state.get("free_cases", [])),
-            "player_id": self.state.get("player_id", ""),
+            "player_id": self.player_id(),   # minted here so a new player can be gifted to
             "sent_gifts": list(self.state.get("sent_gifts", [])),
             "is_full_catalog": self.catalog.get("source") == "bymykel",
             "config": {

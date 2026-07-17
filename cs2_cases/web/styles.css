@@ -471,4 +471,4 @@ body.overlay-mode .content { display: none; }
 .sent-name { font-size: 12px; color: #fff; font-weight: 600; overflow-wrap: anywhere; }
 .sent-meta { font-size: 10px; color: var(--muted); margin: 2px 0 6px; overflow-wrap: anywhere; }
 .cell .from { font-size: 9px; color: var(--gold); letter-spacing: .3px; overflow-wrap: anywhere; }
-.empty { color: var(--muted); font-size: 12px; line-height: 1.5; }
+.hint { color: var(--muted); font-size: 12px; line-height: 1.5; }

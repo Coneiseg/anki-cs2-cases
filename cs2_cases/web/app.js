@@ -481,7 +481,7 @@
                 + '<button class="btn sec small copy-sent" data-i="' + i + '">Copy code</button>'
                 + "</div>";
             }).join("")
-          : '<div class="empty">Gift a skin from your inventory and the code shows up here. '
+          : '<div class="hint">Gift a skin from your inventory and the code shows up here. '
             + "It stays here forever, so you can always send it again.</div>");
     $("#copy-id").onclick = function () { copyText(s.player_id || ""); };
     $("#redeem-go").onclick = function () {
@@ -775,7 +775,6 @@
         setView("friends");
       }
       if (action === "redeem") {
-        $("#redeem-box").value = "";
         toast("Received " + res.item.name + " from " + res.item.from + "!");
       }
       if (action === "favorite") {

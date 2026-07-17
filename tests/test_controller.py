@@ -151,6 +151,20 @@ class GiftingControllerTest(unittest.TestCase):
     def test_cannot_gift_to_yourself(self):
         with self.assertRaises(gifting.GiftError):
             self.a.gift(self.uid, self.a.player_id())
+
+    def test_a_new_player_has_an_id_to_hand_out_before_sending_anything(self):
+        # the receiving player needs an id BEFORE they have ever gifted
+        fresh = controller.Controller(os.path.join(self.dir, "fresh.json"),
+                                      self.config, load_dataset())
+        pid = fresh.state_payload()["player_id"]
+        self.assertTrue(gifting.is_player_id(pid))
+        reloaded = controller.Controller(fresh.state_path, self.config, load_dataset())
+        self.assertEqual(reloaded.state_payload()["player_id"], pid)  # and it's stable
+
+    def test_reading_the_payload_repeatedly_does_not_change_the_id(self):
+        first = self.a.state_payload()["player_id"]
+        for _ in range(3):
+            self.assertEqual(self.a.state_payload()["player_id"], first)
         self.assertEqual(len(self.a.state["inventory"]), 1)  # not consumed
 
     def test_gift_requires_a_recipient_id(self):
