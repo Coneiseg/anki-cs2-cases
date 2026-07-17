@@ -10,7 +10,7 @@ import zlib
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from cs2_cases import controller, economy, gifting
+from cs2_cases import controller, economy, gifting, store
 
 
 def load_dataset():
@@ -151,6 +151,7 @@ class GiftingControllerTest(unittest.TestCase):
     def test_cannot_gift_to_yourself(self):
         with self.assertRaises(gifting.GiftError):
             self.a.gift(self.uid, self.a.player_id())
+        self.assertEqual(len(self.a.state["inventory"]), 1)  # not consumed
 
     def test_a_new_player_has_an_id_to_hand_out_before_sending_anything(self):
         # the receiving player needs an id BEFORE they have ever gifted
@@ -161,11 +162,22 @@ class GiftingControllerTest(unittest.TestCase):
         reloaded = controller.Controller(fresh.state_path, self.config, load_dataset())
         self.assertEqual(reloaded.state_payload()["player_id"], pid)  # and it's stable
 
-    def test_reading_the_payload_repeatedly_does_not_change_the_id(self):
-        first = self.a.state_payload()["player_id"]
-        for _ in range(3):
-            self.assertEqual(self.a.state_payload()["player_id"], first)
-        self.assertEqual(len(self.a.state["inventory"]), 1)  # not consumed
+    def test_reading_the_payload_repeatedly_mints_once_and_never_rewrites(self):
+        # state_payload() runs on every panel refresh, so minting must not fsync the
+        # save file each time
+        fresh = controller.Controller(os.path.join(self.dir, "cheap.json"),
+                                      self.config, load_dataset())
+        writes = []
+        original = store.save
+        store.save = lambda path, state: writes.append(path) or original(path, state)
+        try:
+            first = fresh.state_payload()["player_id"]
+            for _ in range(3):
+                self.assertEqual(fresh.state_payload()["player_id"], first)
+        finally:
+            store.save = original
+        self.assertTrue(gifting.is_player_id(first))
+        self.assertEqual(len(writes), 1)  # the mint only
 
     def test_gift_requires_a_recipient_id(self):
         with self.assertRaises(gifting.GiftError):
