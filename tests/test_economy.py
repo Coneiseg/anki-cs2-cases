@@ -341,5 +341,91 @@ class TradeUpTest(unittest.TestCase):
         self.assertEqual(len(self.state["inventory"]), 9)
 
 
+class GiftingEconomyTest(unittest.TestCase):
+    def setUp(self):
+        self.data = load_dataset()
+        self.state = economy.new_state()
+        self.state["balance"] = 10.0
+        self.drop = economy.open_case(self.state, self.data, "clutch_case",
+                                      random.Random(7))["drop"]
+        self.uid = self.drop["uid"]
+
+    def _payload(self, item_overrides=None, case_id=None):
+        entry = self.state["inventory"][0]
+        item = dict(entry["item"])
+        item.update(item_overrides or {})
+        return {"n": "abc123", "to": "CS2-2222-2222", "fr": "CS2-1111-1111",
+                "i": {"case_id": case_id or entry["case_id"], "rarity": entry["rarity"],
+                      "float": entry["float"], "stattrak": entry["stattrak"],
+                      "item": item}}
+
+    def test_new_state_has_gifting_fields(self):
+        fresh = economy.new_state()
+        self.assertEqual(fresh["player_id"], "")
+        self.assertEqual(fresh["sent_gifts"], [])
+        self.assertEqual(fresh["redeemed_nonces"], [])
+
+    def test_gift_item_removes_it_from_inventory(self):
+        entry = economy.gift_item(self.state, self.uid)
+        self.assertEqual(entry["uid"], self.uid)
+        self.assertEqual(self.state["inventory"], [])
+
+    def test_gift_item_does_not_touch_balance(self):
+        before = self.state["balance"]
+        economy.gift_item(self.state, self.uid)
+        self.assertEqual(self.state["balance"], before)
+
+    def test_cannot_gift_a_favourite(self):
+        economy.set_favorite(self.state, [self.uid], True)
+        with self.assertRaises(economy.EconomyError) as cm:
+            economy.gift_item(self.state, self.uid)
+        self.assertIn("favourite", str(cm.exception))
+        self.assertEqual(len(self.state["inventory"]), 1)  # still there
+
+    def test_gift_unknown_uid_raises(self):
+        with self.assertRaises(economy.ItemNotFound):
+            economy.gift_item(self.state, 9999)
+
+    def test_receive_item_appends_and_tags_provenance(self):
+        payload = self._payload()
+        recipient = economy.new_state()
+        entry = economy.receive_item(recipient, self.data, payload)
+        self.assertEqual(len(recipient["inventory"]), 1)
+        self.assertEqual(entry["from"], "CS2-1111-1111")
+        self.assertEqual(entry["item"]["id"], payload["i"]["item"]["id"])
+        self.assertTrue(entry["name"])
+
+    def test_receive_recomputes_value_from_the_local_catalog(self):
+        # sender inflates their embedded copy; recipient must use their own catalog
+        payload = self._payload({"base_value": 9999.0})
+        recipient = economy.new_state()
+        entry = economy.receive_item(recipient, self.data, payload)
+        self.assertLess(entry["value"], 100.0)
+        self.assertEqual(entry["value"], self.drop["value"])
+
+    def test_receive_falls_back_to_the_embedded_item_for_an_unknown_case(self):
+        # friend is on the starter set and has never seen this case
+        payload = self._payload(case_id="no_such_case")
+        recipient = economy.new_state()
+        entry = economy.receive_item(recipient, self.data, payload)
+        self.assertEqual(entry["item"]["id"], payload["i"]["item"]["id"])
+        self.assertGreaterEqual(entry["value"], 0.0)
+
+    def test_receive_derives_wear_from_float(self):
+        payload = self._payload()
+        payload["i"]["float"] = 0.02
+        recipient = economy.new_state()
+        entry = economy.receive_item(recipient, self.data, payload)
+        self.assertEqual(entry["wear"]["id"], "fn")
+
+    def test_gift_then_receive_conserves_exactly_one_item(self):
+        payload = self._payload()
+        economy.gift_item(self.state, self.uid)
+        recipient = economy.new_state()
+        economy.receive_item(recipient, self.data, payload)
+        self.assertEqual(len(self.state["inventory"]), 0)
+        self.assertEqual(len(recipient["inventory"]), 1)
+
+
 if __name__ == "__main__":
     unittest.main()

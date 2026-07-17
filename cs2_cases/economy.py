@@ -51,6 +51,9 @@ def new_state() -> Dict[str, Any]:
         "free_cases": [],     # unopened free cases (case ids) you own
         "last_daily": "",     # ISO date of the last daily grant
         "next_uid": 1,
+        "player_id": "",          # lazily minted by gifting.ensure_player_id()
+        "sent_gifts": [],         # every code ever generated, so it can be re-copied
+        "redeemed_nonces": [],    # replay guard for incoming gifts
         "stats": {
             "cards": 0, "earned": 0.0, "cases_opened": 0, "spent": 0.0,
             "best_value": 0.0, "best_name": "", "best_rarity": "",
@@ -244,6 +247,64 @@ def sell_items(
     state["balance"] = round(state["balance"] + amount, 2)
     return {"amount": amount, "balance": state["balance"],
             "count": sold, "protected": protected}
+
+
+# --- gifting -----------------------------------------------------------
+
+def _catalog_item(data: Dict[str, Any], case_id: str,
+                  item_id: str) -> Optional[Dict[str, Any]]:
+    """The recipient's own copy of a skin, whose prices are authoritative for them.
+    Returns None when they don't have that case (e.g. still on the starter set)."""
+    for case in data.get("cases", []):
+        if case["id"] != case_id:
+            continue
+        for pool in case.get("items", {}).values():
+            for item in pool:
+                if item.get("id") == item_id:
+                    return item
+    return None
+
+
+def gift_item(state: Dict[str, Any], uid: int) -> Dict[str, Any]:
+    """Remove a skin from the inventory so it can be encoded into a gift code.
+
+    There is no escrow and no cancel: the code *is* the item. Holding it locally
+    while a code is outstanding would let the sender reclaim an already-redeemed
+    gift and duplicate it.
+    """
+    idx = _index_of(state, uid)
+    if state["inventory"][idx].get("favorite"):
+        raise EconomyError("That skin is a favourite — unfavourite it to gift.")
+    return state["inventory"].pop(idx)
+
+
+def receive_item(state: Dict[str, Any], data: Dict[str, Any],
+                 payload: Dict[str, Any]) -> Dict[str, Any]:
+    """Reconstruct a gifted skin into the inventory.
+
+    Wear, value and name are recomputed here from the float against *this* player's
+    catalog and prices — the code carries none of them, so a sender cannot inflate
+    what a gift is worth.
+    """
+    gift = payload["i"]
+    item = _catalog_item(data, gift["case_id"], gift["item"].get("id")) or gift["item"]
+    float_value = float(gift["float"])
+    wear = unboxing.wear_tier(float_value, data["wear_tiers"])
+    stattrak = bool(gift["stattrak"])
+    drop = {
+        "case_id": gift["case_id"],
+        "item": item,
+        "rarity": gift["rarity"],
+        "rarity_meta": data.get("rarities", {}).get(gift["rarity"]),
+        "wear": wear,
+        "float": float_value,
+        "stattrak": stattrak,
+        "value": unboxing.value_for(item, wear["id"], stattrak),
+    }
+    entry = _entry_from_drop(state, drop)
+    entry["from"] = payload.get("fr", "")
+    state["inventory"].append(entry)
+    return entry
 
 
 # --- trade-up contracts ----------------------------------------------------
