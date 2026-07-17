@@ -238,7 +238,9 @@
       return '<div class="rar-section' + (collapsed ? " collapsed" : "") + '">'
         + '<div class="rar-head"><span class="caret">▾</span> ' + esc(CAT_LABELS[cat] || cat)
         + ' <span class="cnt">' + list.length + "</span></div>"
-        + '<div class="grid rar-grid">' + list.map(caseCardHtml).join("") + "</div></div>";
+        + '<div class="grid rar-grid">'
+        // map() passes (el, index, arr) — call through so the index can't land in `free`
+        + list.map(function (c) { return caseCardHtml(c, false); }).join("") + "</div></div>";
     }).join("");
     el.innerHTML = banner + freeHtml + sections;
     if (!s.is_full_catalog) {
