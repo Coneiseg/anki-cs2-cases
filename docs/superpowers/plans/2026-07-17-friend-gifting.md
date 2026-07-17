@@ -256,6 +256,7 @@ from __future__ import annotations
 import base64
 import binascii
 import json
+import math
 import re
 import secrets
 import zlib
@@ -379,8 +380,20 @@ def _check_shape(payload: Any) -> None:
 
 
 def _is_number(value: Any) -> bool:
-    # bool is an int subclass; a True float or price is corrupt data, not 1.0
-    return isinstance(value, (int, float)) and not isinstance(value, bool)
+    """A JSON number the engine can safely coerce with float().
+
+    Type alone is not enough. Python ints are unbounded and JSON caps nothing, so
+    10**400 is an ordinary-looking integer that raises OverflowError inside float().
+    json.loads also accepts the non-standard NaN/Infinity literals, which coerce fine
+    and then silently poison a value — an Infinity price sells for an infinite balance
+    that no later play can undo.
+    """
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return False
+    try:
+        return math.isfinite(float(value))
+    except OverflowError:
+        return False
 
 
 def _check_item(item: Any) -> None:
