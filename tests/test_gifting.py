@@ -220,6 +220,37 @@ class DecodeShapeTest(unittest.TestCase):
                           "prices": {"mw": 27.57, "st_mw": 28.66}}
         self.assertEqual(gifting.decode(self._code_for(p))["n"], "deadbeef")
 
+    def test_rejects_numbers_too_large_to_be_floats(self):
+        # Python ints are unbounded and JSON caps nothing: float() raises OverflowError
+        huge = 10 ** 400
+        for build in (lambda p: p["i"].__setitem__("float", huge),
+                      lambda p: p["i"]["item"].__setitem__("base_value", huge),
+                      lambda p: p["i"]["item"].__setitem__("prices", {"ft": huge})):
+            p = self._valid()
+            build(p)
+            with self.assertRaises(gifting.GiftError):
+                gifting.decode(self._code_for(p))
+
+    def test_rejects_nan_and_infinity(self):
+        # json.loads accepts these non-standard literals; an Infinity price would sell
+        # for an infinite balance that no later play can undo
+        for bad in (float("nan"), float("inf"), float("-inf")):
+            for build in (lambda p, b=bad: p["i"].__setitem__("float", b),
+                          lambda p, b=bad: p["i"]["item"].__setitem__("base_value", b),
+                          lambda p, b=bad: p["i"]["item"].__setitem__("prices", {"ft": b})):
+                p = self._valid()
+                build(p)
+                with self.assertRaises(gifting.GiftError):
+                    gifting.decode(self._code_for(p))
+
+    def test_still_accepts_ordinary_numbers(self):
+        # guard against over-rejecting: ints, floats and zero are all legitimate
+        p = self._valid()
+        p["i"]["float"] = 0
+        p["i"]["item"]["base_value"] = 3
+        p["i"]["item"]["prices"] = {"ft": 0.0, "st_ft": 27.57}
+        self.assertEqual(gifting.decode(self._code_for(p))["n"], "deadbeef")
+
 
 class CheckRedeemableTest(unittest.TestCase):
     def setUp(self):
