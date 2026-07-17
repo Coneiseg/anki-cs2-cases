@@ -257,6 +257,21 @@ class DecodeShapeTest(unittest.TestCase):
                 with self.assertRaises(gifting.GiftError):
                     gifting.decode(self._code_for(p))
 
+    def test_decode_strips_an_image_url_from_a_crafted_code(self):
+        # codes are unsigned: an attacker hand-builds the JSON and never calls encode(),
+        # so the allow-list has to be enforced here, at the trust boundary. app.js would
+        # otherwise put this straight into an <img src> and leak the recipient's IP.
+        p = self._valid()
+        p["i"]["item"]["image"] = "https://tracker.example.com/pixel.png?id=victim"
+        self.assertNotIn("image", gifting.decode(self._code_for(p))["i"]["item"])
+
+    def test_decode_strips_unknown_fields_from_a_crafted_code(self):
+        p = self._valid()
+        p["i"]["item"]["surprise"] = {"nested": [1, 2, 3]}
+        item = gifting.decode(self._code_for(p))["i"]["item"]
+        self.assertNotIn("surprise", item)
+        self.assertEqual(item["id"], "cc_mp9_black_sand")   # real fields still arrive
+
     def test_still_accepts_ordinary_numbers(self):
         # guard against over-rejecting: ints, floats and zero are all legitimate
         p = self._valid()

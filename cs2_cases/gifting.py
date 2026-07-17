@@ -56,6 +56,11 @@ def is_player_id(value: str) -> bool:
 # a weapon-name placeholder) — whereas an attacker-supplied image URL would be fetched
 # by the recipient's webview, leaking their IP to a stranger and breaking the add-on's
 # offline guarantee.
+#
+# This is the shared allow-list for both sides of the trust boundary: encode() applies
+# it so honest codes stay small, and decode() applies it again so the allow-list is
+# actually enforced. Codes are unsigned — an attacker hand-builds the JSON and never
+# calls encode() — so encode()'s use of this is defence in depth, not the guarantee.
 _ITEM_FIELDS = ("id", "weapon", "skin", "base_value", "prices", "min_float", "max_float")
 
 
@@ -118,6 +123,11 @@ def decode(code: str) -> Dict[str, Any]:
     if format(binascii.crc32(raw) & 0xFFFFFFFF, "08x") != crc.lower():
         raise GiftError("That code looks incomplete — copy the whole thing.")
     _check_shape(payload)
+    # Strip the incoming skin to the fields the engine actually uses. encode() already
+    # does this, but codes are unsigned — an attacker hand-builds the JSON and never
+    # calls encode(). Anything else (notably `image`, which app.js would put straight
+    # into an <img src>) must not survive the trust boundary.
+    payload["i"]["item"] = _portable_item(payload["i"]["item"])
     return payload
 
 
