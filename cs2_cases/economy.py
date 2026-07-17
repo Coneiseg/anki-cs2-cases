@@ -10,8 +10,12 @@ from typing import Any, Dict, List, Optional
 
 from . import unboxing
 
-DEFAULT_CASE_PRICE = 2.50
-DEFAULT_SELL_FRACTION = 1.0
+# The economy is FIXED, not user-configurable: a global market needs every player on
+# identical rules, and a tunable payout/price would let anyone mint value at will.
+EARN_PER_CARD = 0.10
+DEFAULT_CASE_PRICE = 2.50      # fallback only; real cases carry their own baked price
+SELL_FRACTION = 1.0            # you get the full listed value back
+DEFAULT_SELL_FRACTION = SELL_FRACTION
 
 
 class EconomyError(Exception):
@@ -44,6 +48,8 @@ def new_state() -> Dict[str, Any]:
         "balance": 0.0,
         "inventory": [],
         "history": [],
+        "free_cases": [],     # unopened free cases (case ids) you own
+        "last_daily": "",     # ISO date of the last daily grant
         "next_uid": 1,
         "stats": {
             "cards": 0, "earned": 0.0, "cases_opened": 0, "spent": 0.0,
@@ -97,6 +103,24 @@ def _index_of(state: Dict[str, Any], uid: int) -> int:
 
 # --- earning ---------------------------------------------------------------
 
+def claim_daily(state: Dict[str, Any], data: Dict[str, Any], today: str,
+                rng: Optional[random.Random] = None) -> Optional[str]:
+    """Grant one free random weapon case for the day, to open on the house. Idempotent:
+    returns the granted case id, or None if today's case was already claimed."""
+    if state.get("last_daily") == today:
+        return None
+    pool = [c for c in data.get("cases", []) if c.get("category", "Case") == "Case"]
+    if not pool:
+        pool = data.get("cases", [])
+    if not pool:
+        return None
+    rng = rng or random.Random()
+    case = pool[rng.randrange(len(pool))]
+    state.setdefault("free_cases", []).append(case["id"])
+    state["last_daily"] = today
+    return case["id"]
+
+
 def add_earnings(state: Dict[str, Any], amount: float) -> float:
     state["balance"] = round(state["balance"] + amount, 2)
     stats = state.setdefault("stats", {})
@@ -116,12 +140,17 @@ def open_case(
     data: Dict[str, Any],
     case_id: str,
     rng: Optional[random.Random] = None,
+    free: bool = False,
 ) -> Dict[str, Any]:
-    """Buy-and-open a case. Deducts the price, appends the drop, returns the drop
-    plus the reel strip for the animation. Raises before any mutation on error."""
+    """Buy-and-open a case (or redeem a free one). Deducts the price, appends the drop,
+    returns the drop plus the reel strip for the animation. Raises before any mutation."""
     case = case_by_id(data, case_id)
     price = case_price(case, data)
-    if state["balance"] < price:
+    free_cases = state.setdefault("free_cases", [])
+    if free:
+        if case_id not in free_cases:
+            raise EconomyError("You don't have a free %s to open." % case["name"])
+    elif state["balance"] < price:
         raise InsufficientFunds(
             "Need $%.2f to open %s, balance is $%.2f"
             % (price, case["name"], state["balance"])
@@ -131,12 +160,16 @@ def open_case(
     drop = unboxing.roll(case, data, rng=rng)
     reel = unboxing.build_reel(case, data, drop, rng=rng)
 
-    state["balance"] = round(state["balance"] - price, 2)
+    if free:
+        free_cases.remove(case_id)
+    else:
+        state["balance"] = round(state["balance"] - price, 2)
     entry = _entry_from_drop(state, drop)
     state["inventory"].append(entry)
     stats = state.setdefault("stats", {})
     stats["cases_opened"] = stats.get("cases_opened", 0) + 1
-    stats["spent"] = round(stats.get("spent", 0.0) + price, 2)
+    if not free:  # a free case costs nothing, so it doesn't count as spend
+        stats["spent"] = round(stats.get("spent", 0.0) + price, 2)
     pulls = stats.setdefault("pulls", {})
     pulls[entry["rarity"]] = pulls.get(entry["rarity"], 0) + 1
     stats["since_special"] = (0 if entry["rarity"] == "special"

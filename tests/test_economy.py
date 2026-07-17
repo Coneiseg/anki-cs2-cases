@@ -125,6 +125,40 @@ class OpenCaseTest(unittest.TestCase):
         self.assertEqual(len(uids), 5)
 
 
+class DailyFreeCaseTest(unittest.TestCase):
+    def setUp(self):
+        self.data = load_dataset()
+        self.state = economy.new_state()
+
+    def test_grants_once_per_day(self):
+        got = economy.claim_daily(self.state, self.data, "2026-07-17", rng=random.Random(1))
+        self.assertIsNotNone(got)
+        self.assertEqual(self.state["free_cases"], [got])
+        # same day again -> nothing new
+        self.assertIsNone(economy.claim_daily(self.state, self.data, "2026-07-17"))
+        self.assertEqual(len(self.state["free_cases"]), 1)
+        # next day -> another one
+        self.assertIsNotNone(economy.claim_daily(self.state, self.data, "2026-07-18",
+                                                 rng=random.Random(2)))
+        self.assertEqual(len(self.state["free_cases"]), 2)
+
+    def test_free_open_costs_nothing_and_consumes_voucher(self):
+        cid = economy.claim_daily(self.state, self.data, "2026-07-17", rng=random.Random(1))
+        self.state["balance"] = 0.0  # broke, but the free case still opens
+        res = economy.open_case(self.state, self.data, cid, rng=random.Random(3), free=True)
+        self.assertEqual(self.state["balance"], 0.0)      # not charged
+        self.assertEqual(self.state["free_cases"], [])    # voucher consumed
+        self.assertEqual(self.state["stats"]["spent"], 0.0)  # free != spend
+        self.assertEqual(len(self.state["inventory"]), 1)
+        self.assertTrue(res["drop"]["uid"])
+
+    def test_free_open_without_voucher_raises(self):
+        self.state["balance"] = 100.0
+        with self.assertRaises(economy.EconomyError):
+            economy.open_case(self.state, self.data, "clutch_case", free=True)
+        self.assertEqual(len(self.state["inventory"]), 0)
+
+
 class SellTest(unittest.TestCase):
     def test_sell_credits_and_removes(self):
         state = economy.new_state()

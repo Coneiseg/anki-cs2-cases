@@ -5,59 +5,58 @@ immediately. Anki-free so it can be unit-tested and, later, reused server-side.
 """
 from __future__ import annotations
 
+from datetime import date
 from typing import Any, Dict, List, Optional
 
 from . import economy, store
 
 
 class Controller:
+    """The economy (payout, prices, sell-back) is fixed in code, not read from config —
+    a shared/global market requires every player on identical, non-tunable rules."""
+
     def __init__(self, state_path: str, config: Dict[str, Any],
                  catalog: Dict[str, Any], asset_base: str = ""):
         self.state_path = state_path
-        self.config = config
+        self.config = config          # cosmetic/data options only (mute, motion, source)
         self.catalog = catalog
         self.asset_base = asset_base
         self.state = store.load(state_path)
-        self._apply_global_case_price()
-
-    def _apply_global_case_price(self) -> None:
-        """By default each case keeps its own real (baked) price. Only if the user sets
-        an explicit ``case_price`` in config do we override every case with a flat value."""
-        price = self.config.get("case_price")
-        if price is not None:
-            for case in self.catalog.get("cases", []):
-                case["price"] = float(price)
 
     def reload_catalog(self, catalog: Dict[str, Any]) -> None:
         """Swap in a freshly downloaded catalog (keeps state/inventory intact)."""
         self.catalog = catalog
-        self._apply_global_case_price()
 
     def _save(self) -> None:
         store.save(self.state_path, self.state)
 
     # --- actions (each persists) ------------------------------------------
 
+    def claim_daily(self) -> Optional[str]:
+        """Give the player their free case for the day (idempotent)."""
+        granted = economy.claim_daily(self.state, self.catalog, date.today().isoformat())
+        if granted:
+            self._save()
+        return granted
+
     def earn_for_card(self) -> float:
-        amount = float(self.config.get("earn_per_card", 1.0))
-        balance = economy.add_earnings(self.state, amount)
+        self.claim_daily()  # first card of the day also drops the free case
+        balance = economy.add_earnings(self.state, economy.EARN_PER_CARD)
         self._save()
         return balance
 
-    def open_case(self, case_id: str) -> Dict[str, Any]:
-        result = economy.open_case(self.state, self.catalog, case_id)
+    def open_case(self, case_id: str, free: bool = False) -> Dict[str, Any]:
+        result = economy.open_case(self.state, self.catalog, case_id, free=free)
         self._save()
         return result
 
     def sell(self, uid: int) -> Dict[str, Any]:
-        fraction = float(self.config.get("sell_fraction", economy.DEFAULT_SELL_FRACTION))
-        result = economy.sell_item(self.state, int(uid), fraction)
+        result = economy.sell_item(self.state, int(uid), economy.SELL_FRACTION)
         self._save()
         return result
 
     def sell_many(self, uids: List[int]) -> Dict[str, Any]:
-        fraction = float(self.config.get("sell_fraction", economy.DEFAULT_SELL_FRACTION))
-        result = economy.sell_items(self.state, uids, fraction)
+        result = economy.sell_items(self.state, uids, economy.SELL_FRACTION)
         self._save()
         return result
 
@@ -82,11 +81,12 @@ class Controller:
             "inventory_value": inv_value,
             "inventory_count": len(inventory),
             "history": list(reversed(self.state.get("history", []))),  # newest first
+            "free_cases": list(self.state.get("free_cases", [])),
             "is_full_catalog": self.catalog.get("source") == "bymykel",
             "config": {
                 "muted": bool(self.config.get("muted", False)),
                 "reduced_motion": bool(self.config.get("reduced_motion", False)),
-                "earn_per_card": float(self.config.get("earn_per_card", 0.10)),
+                "earn_per_card": economy.EARN_PER_CARD,   # fixed, shown for reference
             },
             "asset_base": self.asset_base,
             "rarities": self.catalog["rarities"],

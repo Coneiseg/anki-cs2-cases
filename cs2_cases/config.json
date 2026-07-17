@@ -1,7 +1,4 @@
 {
-  "earn_per_card": 0.10,
-  "case_price": null,
-  "sell_fraction": 1.0,
   "muted": false,
   "reduced_motion": false,
   "enable_online_refresh": true,

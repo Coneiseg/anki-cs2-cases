@@ -186,18 +186,21 @@
   var _storeDetail = null;
   var CAT_LABELS = { "Case": "Weapon Cases", "Souvenir": "Souvenir Packages", "Souvenir Highlight": "Souvenir Highlights" };
   var CAT_ORDER = ["Case", "Souvenir", "Souvenir Highlight"];
-  function openCase(caseId) {
+  function openCase(caseId, free) {
     var a = audioCtx(); if (a && a.state === "suspended") a.resume();
-    cs2.send("open", { case_id: caseId });
+    cs2.send("open", { case_id: caseId, free: !!free });
   }
-  function caseCardHtml(c) {
+  function caseCardHtml(c, free) {
     var afford = (window.__state.balance || 0) >= c.price, u = imgUrl(c.image);
-    return '<div class="cell case click" data-id="' + esc(c.id) + '">'
+    var btn = free
+      ? '<button class="btn free openfree">Open Free</button>'
+      : '<button class="btn open"' + (afford ? "" : " disabled") + ">Open $" + c.price.toFixed(2) + "</button>";
+    return '<div class="cell case click' + (free ? " freecase" : "") + '" data-id="' + esc(c.id) + '">'
+      + (free ? '<span class="fav">★</span>' : "")
       + '<div class="art">' + (u ? '<img src="' + esc(u) + '" onerror="this.style.display=\'none\'">'
         : '<span class="box">Case</span>') + "</div>"
       + '<div class="name">' + esc(c.name) + "</div>"
-      + '<div class="openwrap"><button class="btn open"' + (afford ? "" : " disabled")
-      + ">Open $" + c.price.toFixed(2) + "</button></div></div>";
+      + '<div class="openwrap">' + btn + "</div></div>";
   }
   function renderStore() {
     var s = window.__state, el = $("#view-store");
@@ -208,6 +211,22 @@
         + 'catalog (all cases + packages) with real images.</span>'
         + '<button class="btn small" id="dl-catalog">Download real cases</button></div>';
     }
+    // Today's free case(s), on the house — shown first so it's the obvious first click.
+    var freeIds = s.free_cases || [];
+    var freeHtml = "";
+    if (freeIds.length) {
+      var byId = {};
+      s.cases.forEach(function (c) { byId[c.id] = c; });
+      var freeCards = freeIds.map(function (id) { return byId[id]; }).filter(Boolean)
+        .map(function (c) { return caseCardHtml(c, true); }).join("");
+      if (freeCards) {
+        freeHtml = '<div class="section-title">Daily Free Case'
+          + '<span class="note">on the house — one per day</span></div>'
+          + '<div class="grid">' + freeCards + "</div>"
+          + '<div style="height:14px"></div>';
+      }
+    }
+
     // Group containers by category into collapsible sections; weapon cases open,
     // the large souvenir groups collapsed to keep the window uncluttered.
     var groups = {};
@@ -221,7 +240,7 @@
         + ' <span class="cnt">' + list.length + "</span></div>"
         + '<div class="grid rar-grid">' + list.map(caseCardHtml).join("") + "</div></div>";
     }).join("");
-    el.innerHTML = banner + sections;
+    el.innerHTML = banner + freeHtml + sections;
     if (!s.is_full_catalog) {
       $("#dl-catalog").onclick = function () { toast("Downloading catalog + images…"); cs2.send("refresh"); };
     }
@@ -233,6 +252,8 @@
       card.onclick = function () { cs2.send("case_detail", { case_id: id }); };
       var ob = card.querySelector(".open");
       if (ob) ob.onclick = function (ev) { ev.stopPropagation(); openCase(id); };
+      var fb = card.querySelector(".openfree");
+      if (fb) fb.onclick = function (ev) { ev.stopPropagation(); openCase(id, true); };
     });
   }
 

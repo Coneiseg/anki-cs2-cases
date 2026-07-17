@@ -20,7 +20,9 @@ Target: Anki **23.10+** on Qt6.
 
 ## Use
 
-- **Answer cards** in the reviewer → your balance ticks up **$0.10** each (tunable).
+- **Answer cards** in the reviewer → your balance ticks up **$0.10** each.
+- **A free case every day**, on the house — a random weapon case lands in your market the
+  first time you review (or open the market) each day, to start you off.
 - The **★** in Anki's toolbar (or **Tools ▸ CS2 Cases**) toggles the **market panel** — a
   dockable sidebar. Drag it to float/re-dock.
   - **Cases** — click a case to preview its full skin pool + real drop odds; hit **Open**.
@@ -40,8 +42,13 @@ and [price tracker](https://github.com/ByMykel/counter-strike-price-tracker).
 
 ## Configuration
 
-**Tools ▸ Add-ons ▸ CS2 Cases ▸ Config** (details in `config.md`): per-card payout, flat
-case-price override, sell-back fraction, mute, reduced-motion, online refresh.
+**Tools ▸ Add-ons ▸ CS2 Cases ▸ Config** (details in `config.md`): mute, reduced-motion,
+and the online data source. Mute and reduced-motion are also toggleable in the Stats tab.
+
+**The economy is fixed and deliberately not configurable** — payout ($0.10/card), case
+prices (real market + $2.49 key), and sell-back (100%) are locked in code so every player
+runs identical rules. This is a prerequisite for the planned global market: a tunable
+payout would let anyone mint value at will.
 
 ## Attribution & disclaimer
 

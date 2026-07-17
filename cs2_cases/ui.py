@@ -168,7 +168,8 @@ def toggle_panel(*_args):
     if _dock.isVisible():
         _dock.hide()
     else:
-        _reload_panel()          # rebuild with fresh balance/inventory
+        controller.claim_daily()  # opening the market also drops today's free case
+        _reload_panel()           # rebuild with fresh balance/inventory
         if _dock.isFloating():   # snap a popped-out panel back into the sidebar
             _dock.setFloating(False)
         _dock.show()
@@ -184,7 +185,7 @@ def _on_panel_bridge(cmd):
     if action is None:
         return
     if action == "open":
-        _launch_open(args.get("case_id"))
+        _launch_open(args.get("case_id"), bool(args.get("free")))
         return
     if action == "refresh":
         update_catalog()
@@ -235,10 +236,10 @@ def _on_panel_bridge(cmd):
     _send(_panel, action, res)
 
 
-def _launch_open(case_id):
+def _launch_open(case_id, free=False):
     c = _get_controller()
     try:
-        result = c.open_case(case_id)
+        result = c.open_case(case_id, free=free)
     except economy.EconomyError as exc:
         _send(_panel, "open", {"ok": False, "error": str(exc)})
         return

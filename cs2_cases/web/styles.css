@@ -193,6 +193,18 @@ body.overlay-mode .content { display: none; }
 .openwrap { padding: 0 5px 6px; }
 .btn.open { padding: 5px 4px; font-size: 11px; letter-spacing: .5px; }
 
+/* daily free case — a gift, so it reads gold */
+.btn.free {
+  padding: 5px 4px; font-size: 11px; letter-spacing: .5px;
+  background: #c99a04; border-color: #7d6103; color: #201a00;
+}
+.btn.free:hover { background: #e0ad07; }
+.cell.freecase { border-color: #7d6103; box-shadow: 0 0 14px -2px rgba(242,194,0,.5); }
+.cell.freecase .art::before {
+  content: ""; position: absolute; inset: 0; opacity: .18;
+  background: radial-gradient(ellipse at 50% 60%, var(--gold), transparent 62%);
+}
+
 /* ---- inventory controls ---- */
 .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 14px; }
 .controls input, .controls select {

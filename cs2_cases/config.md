@@ -2,10 +2,11 @@
 
 All currency is **virtual**. No real money is involved.
 
-- **earn_per_card** — dollars added each time you answer a card (any rating). Default `0.10`.
-- **case_price** — leave `null` to use each case's real cost to open (market price + $2.49 key,
-  baked in at catalog update). Set a number to force a single flat price for every case.
-- **sell_fraction** — fraction of a skin's value returned when you sell it (`1.0` = full). Default `1.0`.
+> **The economy is fixed and not configurable.** Earnings (**$0.10 per card**), case prices
+> (real market price + $2.49 key), and sell-back (**100%** of value) are locked in code so
+> every player is on the same rules — a prerequisite for the planned global market. Only the
+> cosmetic/data options below can be changed.
+
 - **muted** — silence case-opening sounds. Default `false`.
 - **reduced_motion** — skip the long reel animation and reveal instantly. Default `false`.
 - **enable_online_refresh** — allow fetching the full catalog + images/sounds from a source. Default `false`.
