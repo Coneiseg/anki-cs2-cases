@@ -1,6 +1,7 @@
 """Tests for the gift-code codec. Pure Python, no Anki import required."""
 import base64
 import binascii
+import json
 import os
 import sys
 import unittest
@@ -132,6 +133,60 @@ class DecodeRejectionTest(unittest.TestCase):
         crc = format(binascii.crc32(raw) & 0xFFFFFFFF, "08x")
         with self.assertRaises(gifting.GiftError):
             gifting.decode("CS2GIFT-1-%s-%s" % (body, crc))
+
+
+class DecodeShapeTest(unittest.TestCase):
+    """A valid CRC proves nothing: codes are unsigned, so anyone can craft one."""
+
+    def _code_for(self, payload):
+        raw = json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8")
+        body = base64.urlsafe_b64encode(zlib.compress(raw, 9)).decode("ascii").rstrip("=")
+        crc = format(binascii.crc32(raw) & 0xFFFFFFFF, "08x")
+        return "CS2GIFT-1-%s-%s" % (body, crc)
+
+    def _valid(self):
+        return {"n": "deadbeef", "to": "CS2-2222-2222", "fr": "CS2-1111-1111",
+                "i": {"case_id": "clutch_case", "rarity": "mil_spec", "float": 0.3,
+                      "stattrak": False, "item": {"id": "cc_mp9_black_sand"}}}
+
+    def test_the_control_payload_decodes(self):
+        # guards the rejection tests below from passing for the wrong reason
+        self.assertEqual(gifting.decode(self._code_for(self._valid()))["n"], "deadbeef")
+
+    def test_rejects_empty_item_payload(self):
+        p = self._valid(); p["i"] = {}
+        with self.assertRaises(gifting.GiftError):
+            gifting.decode(self._code_for(p))
+
+    def test_rejects_non_dict_payload(self):
+        with self.assertRaises(gifting.GiftError):
+            gifting.decode(self._code_for([1, 2, 3]))
+
+    def test_rejects_missing_recipient(self):
+        p = self._valid(); del p["to"]
+        with self.assertRaises(gifting.GiftError):
+            gifting.decode(self._code_for(p))
+
+    def test_rejects_item_without_an_id(self):
+        p = self._valid(); p["i"]["item"] = {"weapon": "AK-47"}
+        with self.assertRaises(gifting.GiftError):
+            gifting.decode(self._code_for(p))
+
+    def test_rejects_non_numeric_float(self):
+        p = self._valid(); p["i"]["float"] = "shiny"
+        with self.assertRaises(gifting.GiftError):
+            gifting.decode(self._code_for(p))
+
+    def test_rejects_boolean_float(self):
+        # bool is an int subclass; True must not sneak through as 1.0
+        p = self._valid(); p["i"]["float"] = True
+        with self.assertRaises(gifting.GiftError):
+            gifting.decode(self._code_for(p))
+
+    def test_rejects_non_bool_stattrak(self):
+        p = self._valid(); p["i"]["stattrak"] = "yes"
+        with self.assertRaises(gifting.GiftError):
+            gifting.decode(self._code_for(p))
 
 
 class CheckRedeemableTest(unittest.TestCase):
