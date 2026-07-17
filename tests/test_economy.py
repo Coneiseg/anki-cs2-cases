@@ -439,6 +439,24 @@ class GiftingEconomyTest(unittest.TestCase):
         self.assertEqual(len(self.state["inventory"]), 0)
         self.assertEqual(len(recipient["inventory"]), 1)
 
+    def test_trade_up_survives_an_input_from_a_case_we_do_not_have(self):
+        # the default first-share case: a friend on the full catalog gifts a skin from
+        # a case this player has never seen, and it must not poison their contract
+        recipient = economy.new_state()
+        recipient["balance"] = 50.0
+        for _ in range(9):
+            economy.open_case(recipient, self.data, "clutch_case", random.Random(3))
+        mils = [e for e in recipient["inventory"] if e["rarity"] == "mil_spec"][:9]
+        while len(mils) < 9:  # top up until we have 9 mil-specs
+            economy.open_case(recipient, self.data, "clutch_case", random.Random(4))
+            mils = [e for e in recipient["inventory"] if e["rarity"] == "mil_spec"][:9]
+        payload = self._payload(case_id="a_case_we_never_heard_of")
+        payload["i"]["rarity"] = "mil_spec"
+        gifted = economy.receive_item(recipient, self.data, payload)
+        uids = [gifted["uid"]] + [e["uid"] for e in mils]
+        result = economy.trade_up(recipient, self.data, uids, random.Random(5))
+        self.assertEqual(result["output"]["rarity"], "restricted")
+
 
 if __name__ == "__main__":
     unittest.main()

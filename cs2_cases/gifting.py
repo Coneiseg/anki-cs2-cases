@@ -51,6 +51,18 @@ def is_player_id(value: str) -> bool:
     return bool(_ID_RE.match(normalize_id(value)))
 
 
+# Only these fields travel. Notably absent: `image`. The recipient either has the skin
+# (and uses their own catalog copy, image and all) or doesn't (and the UI falls back to
+# a weapon-name placeholder) — whereas an attacker-supplied image URL would be fetched
+# by the recipient's webview, leaking their IP to a stranger and breaking the add-on's
+# offline guarantee.
+_ITEM_FIELDS = ("id", "weapon", "skin", "base_value", "prices", "min_float", "max_float")
+
+
+def _portable_item(item: Dict[str, Any]) -> Dict[str, Any]:
+    return {k: item[k] for k in _ITEM_FIELDS if k in item}
+
+
 def encode(entry: Dict[str, Any], sender_id: str, recipient_id: str,
            nonce: Optional[str] = None) -> str:
     """Pack an inventory entry into a code addressed to ``recipient_id``.
@@ -67,7 +79,7 @@ def encode(entry: Dict[str, Any], sender_id: str, recipient_id: str,
             "rarity": entry["rarity"],
             "float": entry["float"],
             "stattrak": bool(entry["stattrak"]),
-            "item": entry["item"],
+            "item": _portable_item(entry["item"]),
         },
     }
     raw = json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8")

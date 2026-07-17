@@ -194,9 +194,9 @@ class GiftingControllerTest(unittest.TestCase):
         self.assertIn("player_id", payload)
         self.assertIn("sent_gifts", payload)
 
-    def _crafted_code(self, item, to_id, float_value=0.01, stattrak=True):
+    def _crafted_code(self, item, to_id, float_value=0.01, stattrak=True, nonce="craft"):
         """A hand-built code: real codes are unsigned, so anyone can forge one."""
-        payload = {"n": "craft", "to": to_id, "fr": "CS2-1111-1111",
+        payload = {"n": nonce, "to": to_id, "fr": "CS2-1111-1111",
                    "i": {"case_id": "c", "rarity": "mil_spec", "float": float_value,
                          "stattrak": stattrak, "item": item}}
         raw = json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8")
@@ -207,13 +207,14 @@ class GiftingControllerTest(unittest.TestCase):
     def test_redeem_rejects_crafted_values_rather_than_crashing(self):
         # a crafted code must surface as a GiftError the UI can toast, never as a raw
         # exception (Anki turns those into an error dialog) and never as inf balance
-        for item in ({"id": "x", "base_value": 1.7e308},
+        for i, item in enumerate((
+                     {"id": "x", "base_value": 1.7e308},
                      {"id": "x", "prices": {"fn": 1e308}},
                      {"id": "x", "prices": {"fn": -1e9}},
                      {"id": "x", "base_value": 10 ** 400},
                      {"id": "x", "prices": {"fn": float("inf")}},
-                     {}):
-            code = self._crafted_code(item, self.b.player_id())
+                     {})):
+            code = self._crafted_code(item, self.b.player_id(), nonce="craft-%d" % i)
             with self.assertRaises(gifting.GiftError):
                 self.b.redeem(code)
         self.assertEqual(self.b.state["inventory"], [])

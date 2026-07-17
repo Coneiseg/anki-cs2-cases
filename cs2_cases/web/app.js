@@ -313,7 +313,7 @@
     var s = window.__state, el = $("#view-stats");
     var st = s.stats || {};
     var spent = st.spent || 0, invVal = s.inventory_value || 0;
-    var net = invVal - spent;                       // unbox profit/loss on cases
+    var net = invVal - spent;                       // what you hold vs what you've spent
     var netCls = net >= 0 ? "up" : "down";
     var netStr = (net >= 0 ? "+$" : "-$") + Math.abs(net).toFixed(2);
 
@@ -353,7 +353,7 @@
       + statRow("Cards answered", (st.cards || 0).toLocaleString())
       + statRow("Cases opened", (st.cases_opened || 0).toLocaleString())
       + statRow("Spent on cases", "$" + spent.toFixed(2), "down")
-      + statRow("Unboxing net", netStr, netCls)
+      + statRow("Collection vs spend", netStr, netCls)
       + "</div>"
       + '<div class="section-title" style="margin-top:18px">Unboxed by Rarity'
       + '<span class="note">' + totalPulls.toLocaleString() + " unboxed · " + drought + " since ★</span></div>"
@@ -398,10 +398,10 @@
   }
   function duplicateUids() {
     // Keep the highest-value copy of each weapon|skin; the rest are duplicates.
-    // Favourites are never offered up for selling.
+    // Favourites and gifts are never offered up for selling.
     var groups = {};
     window.__state.inventory.forEach(function (e) {
-      if (e.favorite) return;
+      if (e.favorite || e.from) return;   // never bulk-sell a gift: it can't be re-rolled
       var k = e.item.weapon + "|" + e.item.skin;
       (groups[k] = groups[k] || []).push(e);
     });

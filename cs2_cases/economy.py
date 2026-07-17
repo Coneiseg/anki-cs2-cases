@@ -373,8 +373,14 @@ def trade_up(
     counts = {}
     for e in entries:
         counts[e["case_id"]] = counts.get(e["case_id"], 0) + 1
-    weighted = [(cid, n) for cid, n in counts.items()
-                if case_by_id(data, cid)["items"].get(next_rarity)]
+    # A gifted skin can name a case this player doesn't have (their friend was on a
+    # fuller catalog). It just contributes no collection weight — case_by_id() would
+    # raise and take the whole contract down with it.
+    weighted = []
+    for cid, n in counts.items():
+        case = next((c for c in data.get("cases", []) if c["id"] == cid), None)
+        if case and case["items"].get(next_rarity):
+            weighted.append((cid, n))
     if not weighted:  # source cases lack that tier (e.g. souvenir has no knives) -> any
         weighted = [(c["id"], 1) for c in data["cases"] if c["items"].get(next_rarity)]
     if not weighted:

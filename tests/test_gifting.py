@@ -94,6 +94,20 @@ class EncodeDecodeTest(unittest.TestCase):
         mangled = self.code[:20] + "\n  " + self.code[20:] + "\n"
         self.assertEqual(gifting.decode(mangled)["n"], gifting.decode(self.code)["n"])
 
+    def test_code_never_carries_an_image_url(self):
+        # an attacker-supplied image would be fetched by the recipient's webview,
+        # leaking their IP and breaking the add-on's offline guarantee
+        entry = make_entry()
+        entry["item"]["image"] = "https://tracker.example.com/pixel.png"
+        code = gifting.encode(entry, "CS2-1111-1111", "CS2-2222-2222")
+        self.assertNotIn("image", gifting.decode(code)["i"]["item"])
+        self.assertNotIn("tracker.example.com", code)
+
+    def test_code_keeps_the_fields_valuation_needs(self):
+        p = gifting.decode(gifting.encode(make_entry(), "CS2-1111-1111", "CS2-2222-2222"))
+        for key in ("id", "weapon", "skin", "base_value", "prices"):
+            self.assertIn(key, p["i"]["item"])
+
 
 class DecodeRejectionTest(unittest.TestCase):
     def setUp(self):
