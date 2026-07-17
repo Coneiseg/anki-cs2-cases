@@ -125,6 +125,7 @@ Every rejection is a specific, actionable message rather than a generic failure:
 | Bad prefix / not a code | "That doesn't look like a gift code." |
 | Unknown version | "This code was made by a newer version of the add-on." |
 | crc32 mismatch | "That code looks incomplete — copy the whole thing." |
+| Structurally wrong payload | "That gift code is corrupted." |
 | `to` != my id | "This gift is for CS2-XXXX-XXXX, not you." |
 | `fr` == my id | "You can't redeem your own gift." |
 | Nonce already used | "You've already redeemed this gift." |

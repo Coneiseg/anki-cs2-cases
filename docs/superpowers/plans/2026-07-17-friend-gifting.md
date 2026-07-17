@@ -347,9 +347,37 @@ def decode(code: str) -> Dict[str, Any]:
         raise GiftError("That code looks incomplete — copy the whole thing.")
     if format(binascii.crc32(raw) & 0xFFFFFFFF, "08x") != crc.lower():
         raise GiftError("That code looks incomplete — copy the whole thing.")
-    if not isinstance(payload, dict) or "i" not in payload or "n" not in payload:
-        raise GiftError("That code looks incomplete — copy the whole thing.")
+    _check_shape(payload)
     return payload
+
+
+def _check_shape(payload: Any) -> None:
+    """Reject a structurally wrong payload here, at the trust boundary.
+
+    Codes are unsigned, so a well-formed CRC proves nothing about the contents: anyone
+    can craft one carrying an empty or malformed body. decode()'s contract is that any
+    pasted text becomes data or a GiftError, so every field the rest of the engine
+    dereferences must be checked once, here, rather than blowing up as a KeyError or
+    TypeError deep inside the economy (where Anki would surface it as an error dialog).
+    """
+    if not isinstance(payload, dict):
+        raise GiftError("That gift code is corrupted.")
+    gift = payload.get("i")
+    if not isinstance(gift, dict):
+        raise GiftError("That gift code is corrupted.")
+    for key in ("n", "to", "fr"):
+        if not isinstance(payload.get(key), str):
+            raise GiftError("That gift code is corrupted.")
+    for key in ("case_id", "rarity"):
+        if not isinstance(gift.get(key), str):
+            raise GiftError("That gift code is corrupted.")
+    if not isinstance(gift.get("item"), dict) or not gift["item"].get("id"):
+        raise GiftError("That gift code is corrupted.")
+    if not isinstance(gift.get("stattrak"), bool):
+        raise GiftError("That gift code is corrupted.")
+    # bool is an int subclass, so exclude it explicitly rather than accepting True as 1.0
+    if isinstance(gift.get("float"), bool) or not isinstance(gift.get("float"), (int, float)):
+        raise GiftError("That gift code is corrupted.")
 
 
 def check_redeemable(payload: Dict[str, Any], my_id: str,
