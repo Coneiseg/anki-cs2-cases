@@ -36,10 +36,13 @@
 
 * { box-sizing: border-box; }
 /* No native (Aqua) chrome and no rounding anywhere. !important because Anki's own
-   webview base stylesheet styles/rounds buttons and would otherwise win. */
+   webview base stylesheet styles/rounds buttons and would otherwise win.
+   The margin reset kills Anki's `button { margin: 0 4px }`, which combined with our
+   width:100% pushed every button 4px off-centre inside its card. Not !important, so a
+   rule that wants to space its own button can still override it. */
 button, .btn {
   -webkit-appearance: none !important; appearance: none !important;
-  border-radius: 0 !important; font-family: var(--font);
+  border-radius: 0 !important; font-family: var(--font); margin: 0;
 }
 button:focus { outline: none; }
 
@@ -151,7 +154,6 @@ body.overlay-mode .content { display: none; }
 }
 .cell.selected { outline: 2px solid var(--steam); outline-offset: -2px; }
 .cell.dim { opacity: .32; }
-.cell .sellbtn { margin: 0 7px 7px; }
 
 /* case card */
 .case { cursor: default; }

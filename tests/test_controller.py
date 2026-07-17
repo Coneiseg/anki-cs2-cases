@@ -63,6 +63,23 @@ class ControllerTest(unittest.TestCase):
         self.ctrl.earn_for_card()
         self.assertEqual(len(self.ctrl.state["free_cases"]), 1)
 
+    def test_unclaimed_free_cases_accumulate_and_survive_restart(self):
+        # skipping a day must never forfeit the case: vouchers stack and persist
+        day1 = economy.claim_daily(self.ctrl.state, self.ctrl.catalog, "2026-07-15")
+        day2 = economy.claim_daily(self.ctrl.state, self.ctrl.catalog, "2026-07-16")
+        self.ctrl._save()
+        reloaded = controller.Controller(self.path, self.config, load_dataset())
+        self.assertEqual(reloaded.state["free_cases"], [day1, day2])
+
+    def test_opening_a_free_case_consumes_only_one_voucher(self):
+        economy.claim_daily(self.ctrl.state, self.ctrl.catalog, "2026-07-15")
+        economy.claim_daily(self.ctrl.state, self.ctrl.catalog, "2026-07-16")
+        held = list(self.ctrl.state["free_cases"])
+        before = self.ctrl.state["balance"]
+        self.ctrl.open_case(held[0], free=True)
+        self.assertEqual(self.ctrl.state["free_cases"], held[1:])  # the other one stays
+        self.assertEqual(self.ctrl.state["balance"], before)       # and it cost nothing
+
     def test_payload_has_catalog_metadata(self):
         payload = self.ctrl.state_payload()
         self.assertIn("rarities", payload)
