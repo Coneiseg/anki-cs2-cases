@@ -96,8 +96,11 @@ def decode(code: str) -> Dict[str, Any]:
     try:
         packed = base64.urlsafe_b64decode(body + "=" * (-len(body) % 4))
         raw = zlib.decompress(packed)
+        # RecursionError: deeply-nested JSON blows the stack inside json.loads, and a
+        # ~100-char code is enough to trigger it. This function's contract is that any
+        # pasted text becomes data or a GiftError, so it must not escape.
         payload = json.loads(raw.decode("utf-8"))
-    except (binascii.Error, zlib.error, ValueError):
+    except (binascii.Error, zlib.error, ValueError, RecursionError):
         raise GiftError("That code looks incomplete — copy the whole thing.")
     if format(binascii.crc32(raw) & 0xFFFFFFFF, "08x") != crc.lower():
         raise GiftError("That code looks incomplete — copy the whole thing.")

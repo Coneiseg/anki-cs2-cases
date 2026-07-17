@@ -1,7 +1,10 @@
 """Tests for the gift-code codec. Pure Python, no Anki import required."""
+import base64
+import binascii
 import os
 import sys
 import unittest
+import zlib
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -120,6 +123,15 @@ class DecodeRejectionTest(unittest.TestCase):
         flipped = head[:-3] + ("A" if head[-3] != "A" else "B") + head[-2:]
         with self.assertRaises(gifting.GiftError):
             gifting.decode(flipped + "-" + crc)
+
+    def test_rejects_deeply_nested_json_without_blowing_the_stack(self):
+        # a ~100-char code can nest deeply enough to raise RecursionError inside
+        # json.loads; decode()'s contract is that pasted text yields data or GiftError
+        raw = (b"[" * 20000) + (b"]" * 20000)
+        body = base64.urlsafe_b64encode(zlib.compress(raw, 9)).decode().rstrip("=")
+        crc = format(binascii.crc32(raw) & 0xFFFFFFFF, "08x")
+        with self.assertRaises(gifting.GiftError):
+            gifting.decode("CS2GIFT-1-%s-%s" % (body, crc))
 
 
 class CheckRedeemableTest(unittest.TestCase):
