@@ -188,6 +188,38 @@ class DecodeShapeTest(unittest.TestCase):
         with self.assertRaises(gifting.GiftError):
             gifting.decode(self._code_for(p))
 
+    def test_rejects_prices_that_are_not_a_dict(self):
+        for bad in (["ft"], "left", 3):
+            p = self._valid(); p["i"]["item"]["prices"] = bad
+            with self.assertRaises(gifting.GiftError):
+                gifting.decode(self._code_for(p))
+
+    def test_rejects_a_non_numeric_price(self):
+        p = self._valid(); p["i"]["item"]["prices"] = {"ft": "not-a-number"}
+        with self.assertRaises(gifting.GiftError):
+            gifting.decode(self._code_for(p))
+
+    def test_rejects_a_boolean_price(self):
+        p = self._valid(); p["i"]["item"]["prices"] = {"ft": True}
+        with self.assertRaises(gifting.GiftError):
+            gifting.decode(self._code_for(p))
+
+    def test_rejects_a_non_numeric_base_value(self):
+        p = self._valid(); p["i"]["item"]["base_value"] = "abc"
+        with self.assertRaises(gifting.GiftError):
+            gifting.decode(self._code_for(p))
+
+    def test_accepts_an_item_with_no_prices(self):
+        # starter-set items legitimately carry base_value only
+        p = self._valid(); p["i"]["item"] = {"id": "cc_mp9_black_sand", "base_value": 0.18}
+        self.assertEqual(gifting.decode(self._code_for(p))["n"], "deadbeef")
+
+    def test_accepts_a_real_priced_item(self):
+        p = self._valid()
+        p["i"]["item"] = {"id": "skin-2ca8", "base_value": 0.41,
+                          "prices": {"mw": 27.57, "st_mw": 28.66}}
+        self.assertEqual(gifting.decode(self._code_for(p))["n"], "deadbeef")
+
 
 class CheckRedeemableTest(unittest.TestCase):
     def setUp(self):

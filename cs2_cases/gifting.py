@@ -128,13 +128,39 @@ def _check_shape(payload: Any) -> None:
     for key in ("case_id", "rarity"):
         if not isinstance(gift.get(key), str):
             raise GiftError("That gift code is corrupted.")
-    if not isinstance(gift.get("item"), dict) or not gift["item"].get("id"):
-        raise GiftError("That gift code is corrupted.")
     if not isinstance(gift.get("stattrak"), bool):
         raise GiftError("That gift code is corrupted.")
-    # bool is an int subclass, so exclude it explicitly rather than accepting True as 1.0
-    if isinstance(gift.get("float"), bool) or not isinstance(gift.get("float"), (int, float)):
+    if not _is_number(gift.get("float")):
         raise GiftError("That gift code is corrupted.")
+    _check_item(gift.get("item"))
+
+
+def _is_number(value: Any) -> bool:
+    # bool is an int subclass; a True float or price is corrupt data, not 1.0
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
+def _check_item(item: Any) -> None:
+    """Validate the sender's embedded skin.
+
+    receive_item() falls back to this dict whenever the recipient's catalog lacks the
+    skin — routine when the sender has the full catalog and the recipient is still on the
+    bundled starter set. unboxing.value_for()/compute_value() then read ``prices`` and
+    ``base_value`` straight off it, so anything non-numeric there escapes as a raw
+    TypeError/ValueError from deep inside the engine instead of a GiftError.
+    """
+    if not isinstance(item, dict) or not item.get("id"):
+        raise GiftError("That gift code is corrupted.")
+    if "base_value" in item and not _is_number(item["base_value"]):
+        raise GiftError("That gift code is corrupted.")
+    prices = item.get("prices")
+    if prices is None:
+        return
+    if not isinstance(prices, dict):
+        raise GiftError("That gift code is corrupted.")
+    for key, value in prices.items():
+        if not isinstance(key, str) or not _is_number(value):
+            raise GiftError("That gift code is corrupted.")
 
 
 def check_redeemable(payload: Dict[str, Any], my_id: str,
