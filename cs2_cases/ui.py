@@ -26,7 +26,7 @@ try:
 except Exception:  # older/newer Qt layout
     QWebEngineSettings = None
 
-from . import data, economy
+from . import data, economy, gifting
 
 
 def _allow_autoplay(web):
@@ -205,6 +205,12 @@ def _on_panel_bridge(cmd):
         elif action == "favorite":
             res = c.set_favorite(args["uids"], args.get("value", True))
             res["state"] = c.state_payload()
+        elif action == "gift":
+            res = c.gift(args["uid"], args.get("to", ""))
+            res["state"] = c.state_payload()
+        elif action == "redeem":
+            res = c.redeem(args.get("code", ""))
+            res["state"] = c.state_payload()
         elif action == "case_detail":
             case = next((x for x in c.catalog["cases"]
                          if x["id"] == args.get("case_id")), None)
@@ -230,7 +236,7 @@ def _on_panel_bridge(cmd):
         else:
             res = {"ignored": action}
         res["ok"] = True
-    except economy.EconomyError as exc:
+    except (economy.EconomyError, gifting.GiftError) as exc:
         res = {"ok": False, "error": str(exc)}
     except Exception as exc:  # defensive: never crash the reviewer
         res = {"ok": False, "error": "Unexpected error: %s" % exc}
