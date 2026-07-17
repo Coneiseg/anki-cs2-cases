@@ -28,6 +28,14 @@ Target: Anki **23.10+** on Qt6.
   - **Cases** — click a case to preview its full skin pool + real drop odds; hit **Open**.
   - **Inventory** — search, sort, filter; sell single skins or multi-select and bulk-sell.
   - **Trade Up** — pick 10 skins of one rarity to forge one of the next tier (button pinned).
+  - **Friends** — your Player ID, a box to redeem a friend's gift code, and every code
+    you've sent (re-copyable forever).
+- **Gifting:** select a skin in your inventory → **Gift** → paste your friend's Player ID.
+  You get a `CS2GIFT-…` code to send them however you like; they paste it into their
+  Friends tab and the skin lands in their inventory, tagged with your ID. Codes are locked
+  to one recipient, work offline, and need no account or server. Favourites can't be
+  gifted — unfavourite first. **There is no cancel: the code *is* the skin**, so it leaves
+  your inventory when you generate it (it's kept in your Sent list, so it can't be lost).
   - **Stats** — cards, earnings, cases opened, spend, collection value, unbox net, recent drops.
 - Opening a case takes over the whole Anki window with the reel + reveal. **Click during the
   spin to quick-open**, then **Continue**, **Open Another**, or **Sell**.
@@ -103,8 +111,13 @@ per-user runtime files: state, downloaded catalog, cached images).
 
 - correct tradeups
 - cobblestone packages
-- global marketplace to trade
+- ~~global marketplace to trade~~ — dropped deliberately: earning happens locally in an
+  open-source app, so no server can verify a review really happened and a single cheater
+  would wreck a shared economy. Friend-to-friend gifting ships instead (see
+  `docs/superpowers/specs/2026-07-17-friend-gifting-design.md`).
 
 
 - down the line: pattern based inspection??
 - equip a loadout?
+
+![alt text](image.png)whatever, no need to change anything also i realised that anki has to run online anyway, so lets do anticheat stuff and global market now?

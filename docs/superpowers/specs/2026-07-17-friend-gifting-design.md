@@ -1,6 +1,6 @@
 # Friend Gifting — design
 
-Status: awaiting review · Supersedes the "Phase 2: global marketplace" backlog item
+Status: implemented · Supersedes the "Phase 2: global marketplace" backlog item
 
 ## Why this, and not a global market
 
