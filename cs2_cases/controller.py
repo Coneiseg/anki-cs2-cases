@@ -8,7 +8,7 @@ from __future__ import annotations
 from datetime import date
 from typing import Any, Dict, List, Optional
 
-from . import economy, store
+from . import economy, gifting, store
 
 
 class Controller:
@@ -70,6 +70,43 @@ class Controller:
         self._save()
         return result
 
+    # --- gifting ------------------------------------------------------------
+
+    def player_id(self) -> str:
+        """This save's routing id, minted on first use and then stable."""
+        pid = gifting.ensure_player_id(self.state)
+        self._save()
+        return pid
+
+    def gift(self, uid: int, to_id: str) -> Dict[str, Any]:
+        """Turn a skin into a code addressed to a friend. The item leaves the
+        inventory here and lives in the code from now on."""
+        to_id = gifting.normalize_id(to_id)
+        if not to_id:
+            raise gifting.GiftError("Enter your friend's Player ID.")
+        if not gifting.is_player_id(to_id):
+            raise gifting.GiftError("That isn't a Player ID — it looks like CS2-7F2A-9C4E.")
+        me = gifting.ensure_player_id(self.state)
+        if to_id == me:
+            raise gifting.GiftError("That's your own Player ID.")
+        entry = economy.gift_item(self.state, int(uid))   # validates favourite/uid first
+        code = gifting.encode(entry, me, to_id)
+        self.state.setdefault("sent_gifts", []).insert(0, {
+            "code": code, "name": entry["name"], "to": to_id,
+            "date": date.today().isoformat(),
+        })
+        self._save()
+        return {"code": code, "name": entry["name"], "to": to_id}
+
+    def redeem(self, code: str) -> Dict[str, Any]:
+        me = gifting.ensure_player_id(self.state)
+        payload = gifting.decode(code)
+        gifting.check_redeemable(payload, me, self.state.get("redeemed_nonces", []))
+        entry = economy.receive_item(self.state, self.catalog, payload)
+        self.state.setdefault("redeemed_nonces", []).append(payload["n"])
+        self._save()
+        return {"item": entry}
+
     # --- read model for the webview ---------------------------------------
 
     def state_payload(self) -> Dict[str, Any]:
@@ -82,6 +119,8 @@ class Controller:
             "inventory_count": len(inventory),
             "history": list(reversed(self.state.get("history", []))),  # newest first
             "free_cases": list(self.state.get("free_cases", [])),
+            "player_id": self.state.get("player_id", ""),
+            "sent_gifts": list(self.state.get("sent_gifts", [])),
             "is_full_catalog": self.catalog.get("source") == "bymykel",
             "config": {
                 "muted": bool(self.config.get("muted", False)),
