@@ -313,9 +313,8 @@
     var s = window.__state, el = $("#view-stats");
     var st = s.stats || {};
     var spent = st.spent || 0, invVal = s.inventory_value || 0;
-    var net = invVal - spent;                       // what you hold vs what you've spent
-    var netCls = net >= 0 ? "up" : "down";
-    var netStr = (net >= 0 ? "+$" : "-$") + Math.abs(net).toFixed(2);
+    // Collection value = everything you hold: cash on hand plus the inventory's worth.
+    var networth = (s.balance || 0) + invVal;
 
     // --- rarity pyramid: colored bars, not a wall of numbers ------------------
     var pulls = st.pulls || {};
@@ -353,7 +352,7 @@
       + statRow("Cards answered", (st.cards || 0).toLocaleString())
       + statRow("Cases opened", (st.cases_opened || 0).toLocaleString())
       + statRow("Spent on cases", "$" + spent.toFixed(2), "down")
-      + statRow("Collection vs spend", netStr, netCls)
+      + statRow("Collection value", "$" + networth.toFixed(2), "up")
       + "</div>"
       + '<div class="section-title" style="margin-top:18px">Unboxed by Rarity'
       + '<span class="note">' + totalPulls.toLocaleString() + " unboxed · " + drought + " since ★</span></div>"
@@ -516,7 +515,7 @@
       '<span class="count">' + n + " selected · $" + invSelValue().toFixed(2) + "</span>"
       + '<button class="btn sec small" id="sel-fav">' + (allFav ? "Unfavourite" : "Favourite") + "</button>"
       + (n === 1 ? '<button class="btn sec small" id="sel-gift">Gift</button>' : "")
-      + '<button class="btn danger small" id="sel-sell">Sell selected</button>'
+      + '<button class="btn danger small" id="sel-sell">Sell</button>'
       + '<button class="btn sec small" id="sel-clear">Clear</button>';
     $("#sel-fav").onclick = function () {
       cs2.send("favorite", { uids: Object.keys(_inv.sel).map(Number), value: !allFav });
@@ -545,6 +544,7 @@
       + '<div class="grid" id="tu-grid"></div>'
       + '<div class="scroll-pad"></div>'
       + '<div class="actionbar"><span class="count" id="tu-count">0 / 10 selected</span>'
+      + '<button class="btn sec small" id="tu-auto">Auto-fill</button>'
       + '<button class="btn small" id="tu-go" disabled>Trade Up</button></div>';
     var grid = $("#tu-grid");
     if (!s.inventory.length) { grid.innerHTML = '<div class="empty">Open cases to collect skins first.</div>'; return; }
@@ -562,10 +562,26 @@
       var uids = Object.keys(_tuSel).map(Number);
       if (uids.length === tuTarget()) cs2.send("trade_up", { uids: uids });
     };
+    $("#tu-auto").onclick = autoFillTradeup;
+  }
+  // Reflect _tuSel/_tuRarity into the grid: selected outlines, greying of the tiers
+  // that can no longer join the contract, and the count/button state.
+  function syncTuGrid() {
+    var n = Object.keys(_tuSel).length, target = tuTarget();
+    $("#tu-count").textContent = n + " / " + target + " selected";
+    $("#tu-go").disabled = n !== target;
+    document.querySelectorAll("#tu-grid .cell").forEach(function (c) {
+      var uid = Number(c.getAttribute("data-uid"));
+      c.classList.toggle("selected", !!_tuSel[uid]);
+      if (c.classList.contains("click")) {
+        var mismatch = _tuRarity && c.getAttribute("data-rarity") !== _tuRarity;
+        c.classList.toggle("dim", !!mismatch);
+      }
+    });
   }
   function toggleTu(e, cell) {
     if (_tuSel[e.uid]) {
-      delete _tuSel[e.uid]; cell.classList.remove("selected");
+      delete _tuSel[e.uid];
       if (!Object.keys(_tuSel).length) _tuRarity = null;
     } else {
       if (_tuRarity && _tuRarity !== e.rarity) { toast("Pick skins of the same rarity.", true); return; }
@@ -578,15 +594,56 @@
           toast("Red → Gold can't mix StatTrak™.", true); return;
         }
       }
-      _tuRarity = e.rarity; _tuSel[e.uid] = true; cell.classList.add("selected");
+      _tuRarity = e.rarity; _tuSel[e.uid] = true;
     }
-    var n = Object.keys(_tuSel).length, target = tuTarget();
-    $("#tu-count").textContent = n + " / " + target + " selected";
-    $("#tu-go").disabled = n !== target;
-    document.querySelectorAll("#tu-grid .cell.click").forEach(function (c) {
-      var mismatch = _tuRarity && c.getAttribute("data-rarity") !== _tuRarity;
-      c.classList.toggle("dim", !!mismatch);
+    syncTuGrid();
+  }
+  // Fill the contract to its target with your CHEAPEST eligible skins, so you dump
+  // duplicates rather than your best. Uses the tier you've already started, or the one
+  // you own the most of. Keeps anything you picked by hand.
+  function autoFillTradeup() {
+    var inv = window.__state.inventory;
+    var tradeable = window.__state.trade_up_order.filter(function (r) { return r !== "special"; });
+    var rarity = _tuRarity;
+    if (!rarity) {
+      var counts = {};
+      inv.forEach(function (e) {
+        if (!e.favorite && tradeable.indexOf(e.rarity) !== -1) counts[e.rarity] = (counts[e.rarity] || 0) + 1;
+      });
+      rarity = Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a]; })[0];
+      if (!rarity) { toast("No skins you can trade up yet.", true); return; }
+    }
+    var target = rarity === "covert" ? 5 : 10;
+    var pool = inv.filter(function (e) { return e.rarity === rarity && !e.favorite; });
+    if (rarity === "covert") {  // red -> gold can't mix StatTrak, so commit to one side
+      var stness;
+      var already = inv.filter(function (e) { return _tuSel[e.uid]; });
+      if (already.length) {
+        stness = !!already[0].stattrak;
+      } else {
+        var cheapestSum = function (st) {
+          return pool.filter(function (e) { return !!e.stattrak === st; })
+            .sort(function (a, b) { return a.value - b.value; })
+            .slice(0, target).reduce(function (s, e) { return s + e.value; }, 0);
+        };
+        var stCount = pool.filter(function (e) { return e.stattrak; }).length;
+        var nonCount = pool.length - stCount;
+        if (stCount >= target && nonCount < target) stness = true;
+        else if (nonCount >= target && stCount < target) stness = false;
+        else stness = cheapestSum(true) <= cheapestSum(false);  // both/neither reach 5 -> cheaper set
+      }
+      pool = pool.filter(function (e) { return !!e.stattrak === stness; });
+    }
+    var chosen = {};
+    inv.forEach(function (e) { if (_tuSel[e.uid] && e.rarity === rarity) chosen[e.uid] = true; });
+    pool.sort(function (a, b) { return a.value - b.value; });
+    pool.forEach(function (e) {
+      if (Object.keys(chosen).length < target && !chosen[e.uid]) chosen[e.uid] = true;
     });
+    var n = Object.keys(chosen).length;
+    _tuRarity = rarity; _tuSel = chosen;
+    syncTuGrid();
+    if (n < target) toast("Only " + n + " eligible — a contract needs " + target + ".", true);
   }
 
   // ---- opening flow --------------------------------------------------------

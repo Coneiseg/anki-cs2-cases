@@ -108,8 +108,12 @@ per-user runtime files: state, downloaded catalog, cached images).
 
 ## things alric is brainstorming
 
-
-- correct tradeups
+- ~~fix ui overflow (top bar, inv selected)~~ — top bar wraps to 2 rows with the balance
+  inline; the inventory action bar wraps instead of clipping
+- ~~auto-select for tradeups~~ — an Auto-fill button completes the contract with your
+  cheapest eligible skins of a tier
+- ~~change stats bar to show collection value (money + items in inv)~~ — the Career panel
+  now shows "Collection value" = balance + inventory worth
 - cobblestone packages
 - ~~global marketplace to trade~~ — dropped deliberately: earning happens locally in an
   open-source app, so no server can verify a review really happened and a single cheater
@@ -119,5 +123,3 @@ per-user runtime files: state, downloaded catalog, cached images).
 
 - down the line: pattern based inspection??
 - equip a loadout?
-
-![alt text](image.png)whatever, no need to change anything also i realised that anki has to run online anyway, so lets do anticheat stuff and global market now?

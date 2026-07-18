@@ -75,7 +75,7 @@ body.overlay-mode .content { display: none; }
 
 /* ---- top bar (wraps + shrinks so it fits a narrow dock) ---- */
 .topbar {
-  display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px;
+  display: flex; align-items: center; flex-wrap: wrap; gap: 4px 7px;
   padding: 8px 12px; min-height: 46px; flex: 0 0 auto;
   background: linear-gradient(180deg, #16222c, #0d141a);
   border-bottom: 1px solid #000;
@@ -86,7 +86,10 @@ body.overlay-mode .content { display: none; }
   font-weight: 700; font-size: 14px; letter-spacing: 2px; color: #fff;
   text-transform: uppercase; white-space: nowrap;
 }
-.tabs { display: flex; flex-wrap: wrap; gap: 2px; flex: 1 1 auto; min-width: 0; }
+/* display:contents flattens the tabs into the topbar's own flex flow, so when they
+   wrap at a narrow dock width the balance shares the last tab row instead of being
+   pushed onto a lonely third line. */
+.tabs { display: contents; }
 .tab {
   background: none; border: none; color: var(--muted); cursor: pointer;
   padding: 6px 10px; font-family: var(--font); white-space: nowrap;
@@ -423,12 +426,14 @@ body.overlay-mode .content { display: none; }
 /* fixed bottom action bar — keeps the primary action reachable while scrolling */
 .actionbar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 25;
-  display: flex; align-items: center; gap: 10px; padding: 9px 14px;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 9px 14px;
   background: rgba(11,17,22,.97); border-top: 1px solid #24323d;
   box-shadow: 0 -4px 16px rgba(0,0,0,.5);
 }
-.actionbar .count { margin-right: auto; color: var(--muted); font-size: 12px; letter-spacing: .5px; }
-.actionbar .btn { width: auto; }
+/* The count takes its own row so the action buttons wrap beneath it rather than
+   running off the right edge of a narrow dock (they used to clip "Clear"). */
+.actionbar .count { flex: 1 1 100%; color: var(--muted); font-size: 12px; letter-spacing: .5px; }
+.actionbar .btn { width: auto; flex: 0 0 auto; }
 .scroll-pad { height: 60px; }  /* clearance so the last row isn't hidden by the bar */
 
 /* ---- gold "rare special item" placeholder in the reel ---- */
