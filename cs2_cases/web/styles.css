@@ -441,11 +441,12 @@ body.overlay-mode .content { display: none; }
 .cell.special-hidden .art::before {
   background: radial-gradient(ellipse at 50% 60%, var(--gold), transparent 60%); opacity: .45;
 }
-/* CS2's "Rare Special Item" gold star — a solid gilded star, not a thin font glyph. */
+/* CS2's actual "Rare Special Item" emblem (Valve's default_rare_item.png — the gold
+   laurel wreath around a "?"), the same graphic the game shows in the reel. */
 .cell.special-hidden .goldstar {
-  position: relative; display: block; width: 62%; max-width: 86px; aspect-ratio: 1;
-  background: center/contain no-repeat url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='cs2gold' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='%23fff0a8'/><stop offset='.5' stop-color='%23f2c200'/><stop offset='1' stop-color='%23bf8a06'/></linearGradient></defs><path d='M50 2 61 35 96 35 68 56 78 89 50 69 22 89 32 56 4 35 39 35Z' fill='url(%23cs2gold)' stroke='%23fff6cf' stroke-width='1.6' stroke-opacity='.55'/></svg>");
-  filter: drop-shadow(0 0 15px rgba(242,194,0,.85));
+  position: relative; display: block; width: 90%; max-width: 124px; aspect-ratio: 256 / 198;
+  background: center/contain no-repeat url("/_addons/__ADDON_DIR__/web/img/rare_item.png");
+  filter: drop-shadow(0 0 13px rgba(242,194,0,.7));
 }
 .cell.special-hidden .wpn, .cell.special-hidden .skn { color: var(--gold); }
 .cell.special-hidden .bar { background: var(--gold); box-shadow: 0 0 8px var(--gold); }
