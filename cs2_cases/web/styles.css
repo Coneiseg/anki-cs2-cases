@@ -444,9 +444,11 @@ body.overlay-mode .content { display: none; }
 /* CS2's actual "Rare Special Item" emblem (Valve's default_rare_item.png — the gold
    laurel wreath around a "?"), the same graphic the game shows in the reel. */
 .cell.special-hidden .goldstar {
-  position: relative; display: block; width: 90%; max-width: 124px; aspect-ratio: 256 / 198;
+  /* Size by height so the wreath fits the short reel tile instead of overflowing it. */
+  position: relative; display: block; height: 84%; width: auto; aspect-ratio: 256 / 198;
+  max-width: 92%;
   background: center/contain no-repeat url("/_addons/__ADDON_DIR__/web/img/rare_item.png");
-  filter: drop-shadow(0 0 13px rgba(242,194,0,.7));
+  filter: drop-shadow(0 0 12px rgba(242,194,0,.7));
 }
 .cell.special-hidden .wpn, .cell.special-hidden .skn { color: var(--gold); }
 .cell.special-hidden .bar { background: var(--gold); box-shadow: 0 0 8px var(--gold); }
