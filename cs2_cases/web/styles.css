@@ -371,14 +371,6 @@ body.overlay-mode .content { display: none; }
 .rbar-pct { flex: 0 0 auto; min-width: 40px; text-align: right; color: var(--muted);
   font-variant-numeric: tabular-nums; }
 
-/* collection summary line */
-.collline {
-  display: flex; justify-content: space-between; align-items: baseline;
-  margin-top: 10px; padding: 9px 11px; font-size: 12px; color: var(--muted);
-  background: linear-gradient(180deg, var(--cell-top), var(--cell-bot));
-  border: 1px solid var(--edge); letter-spacing: .5px;
-}
-.collline .cv { color: #fff; font-weight: 700; font-size: 14px; font-variant-numeric: tabular-nums; }
 
 /* settings toggles */
 .setting {

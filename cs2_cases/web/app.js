@@ -357,8 +357,6 @@
       + '<div class="section-title" style="margin-top:18px">Unboxed by Rarity'
       + '<span class="note">' + totalPulls.toLocaleString() + " unboxed · " + drought + " since ★</span></div>"
       + '<div class="rbar">' + rarityHtml + "</div>"
-      + '<div class="collline"><span>' + (s.inventory_count || 0) + " items owned</span>"
-      + '<span class="cv">$' + invVal.toFixed(2) + "</span></div>"
       + '<div class="section-title" style="margin-top:18px">Recent Unboxes</div>'
       + '<div class="histlist">' + rows + "</div>"
       + '<div class="section-title" style="margin-top:18px">Settings</div>'
