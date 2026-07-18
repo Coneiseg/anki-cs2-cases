@@ -22,10 +22,16 @@ class Controller:
         self.catalog = catalog
         self.asset_base = asset_base
         self.state = store.load(state_path)
+        self._revalue()   # held skins reflect the catalog's current real prices
 
     def reload_catalog(self, catalog: Dict[str, Any]) -> None:
         """Swap in a freshly downloaded catalog (keeps state/inventory intact)."""
         self.catalog = catalog
+        self._revalue()
+
+    def _revalue(self) -> None:
+        if economy.revalue_inventory(self.state, self.catalog):
+            self._save()
 
     def _save(self) -> None:
         store.save(self.state_path, self.state)

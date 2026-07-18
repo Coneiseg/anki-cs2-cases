@@ -269,6 +269,26 @@ def _catalog_item(data: Dict[str, Any], item_id: str) -> Optional[Dict[str, Any]
     return None
 
 
+def revalue_inventory(state: Dict[str, Any], data: Dict[str, Any]) -> int:
+    """Re-price every held skin against the current catalog, so sell-back and the
+    collection total track real market prices whenever the catalog is (re)loaded.
+
+    Each item's value is recomputed from its own float and StatTrak against the current
+    catalog copy of the skin (adopting its up-to-date prices/image); an item whose skin
+    the catalog no longer has keeps its embedded copy. Returns how many values changed.
+    """
+    changed = 0
+    for entry in state.get("inventory", []):
+        item = _catalog_item(data, entry.get("item", {}).get("id")) or entry["item"]
+        value = unboxing.value_for(item, entry["wear"]["id"], entry["stattrak"])
+        if item is not entry["item"] or value != entry.get("value"):
+            entry["item"] = item
+            if value != entry.get("value"):
+                entry["value"] = value
+                changed += 1
+    return changed
+
+
 def gift_item(state: Dict[str, Any], uid: int) -> Dict[str, Any]:
     """Remove a skin from the inventory so it can be encoded into a gift code.
 

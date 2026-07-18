@@ -9,10 +9,27 @@ import random
 from typing import Any, Dict, List, Optional
 
 # Value model: a skin's virtual value scales down with wear and up with StatTrak.
-# Deterministic and tunable; used for sell-back and the reveal panel.
-WEAR_VALUE_MULTIPLIER = {"fn": 1.0, "mw": 0.85, "ft": 0.70, "ww": 0.60, "bs": 0.50}
-STATTRAK_VALUE_MULTIPLIER = 1.30
+# These curves are calibrated (2026-07) from ~4,500 priced skins in the real ByMykel
+# Steam dataset, and are used only to estimate a wear/StatTrak the market doesn't list
+# (an exact listed price is always used verbatim). The market's wear decay is far
+# steeper than the old flat guesses (mw 0.85, ft 0.70 …) implied — a Field-Tested is
+# ~a fifth of Factory New, not two-thirds — which had worn skins reading near mint.
+# Fixed constants, consistent with the economy being deliberately non-tunable.
+WEAR_VALUE_MULTIPLIER = {"fn": 1.0, "mw": 0.34, "ft": 0.18, "ww": 0.17, "bs": 0.15}
+STATTRAK_VALUE_MULTIPLIER = 1.23   # median StatTrak/non-StatTrak ratio across the dataset
 DEFAULT_STATTRAK_ODDS = 0.10
+
+# The StatTrak premium shrinks as a skin gets pricier (median ratio per price bucket,
+# same dataset). Applied to the non-StatTrak price when the market lists no StatTrak one.
+_STATTRAK_PREMIUM_BUCKETS = ((1.0, 1.24), (5.0, 1.46), (20.0, 1.34), (100.0, 1.38))
+
+
+def stattrak_premium(base_price: float) -> float:
+    """Estimated StatTrak multiplier for a skin whose non-StatTrak price is ``base_price``."""
+    for ceiling, mult in _STATTRAK_PREMIUM_BUCKETS:
+        if base_price < ceiling:
+            return mult
+    return 1.19  # >$100: StatTrak adds the least, proportionally
 
 
 def wear_tier(float_value: float, wear_tiers: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -66,19 +83,27 @@ def value_for(item: Dict[str, Any], wear_id: str, stattrak: bool) -> float:
         key = ("st_" if stattrak else "") + wear_id
         if key in prices:
             return round(float(prices[key]), 2)
-        if stattrak and wear_id in prices:  # ST price missing -> premium on base wear
-            return round(float(prices[wear_id]) * STATTRAK_VALUE_MULTIPLIER, 2)
-        # nearest available wear: same StatTrak-ness first, then the other
+        if stattrak and wear_id in prices:  # this wear sells non-ST -> apply the premium
+            base = float(prices[wear_id])
+            return round(base * stattrak_premium(base), 2)
+        # This wear isn't listed. Take the nearest wear that is (matching StatTrak-ness
+        # first, then the other) and rescale it by the wear curve, so a Battle-Scarred
+        # roll isn't priced like a Factory New just because only FN was on the market.
+        want = WEAR_VALUE_MULTIPLIER.get(wear_id, 1.0)
         idx = WEAR_ORDER.index(wear_id) if wear_id in WEAR_ORDER else 0
-        for prefix, st_bump in ((("st_" if stattrak else ""), 1.0),
-                                ("", STATTRAK_VALUE_MULTIPLIER if stattrak else 1.0),
-                                ("st_", 1.0)):
+        for prefix, add_premium in ((("st_" if stattrak else ""), False),
+                                    ("", stattrak),
+                                    ("st_", False)):
             for dist in range(len(WEAR_ORDER)):
                 for j in (idx - dist, idx + dist):
                     if 0 <= j < len(WEAR_ORDER):
-                        k = prefix + WEAR_ORDER[j]
+                        w2 = WEAR_ORDER[j]
+                        k = prefix + w2
                         if k in prices:
-                            return round(float(prices[k]) * st_bump, 2)
+                            scaled = float(prices[k]) * (want / WEAR_VALUE_MULTIPLIER.get(w2, 1.0))
+                            if add_premium:  # borrowing a non-ST price for a ST roll
+                                scaled *= stattrak_premium(scaled)
+                            return round(scaled, 2)
     return round(compute_value(item, wear_id, stattrak), 2)
 
 

@@ -33,6 +33,51 @@ def make_entry(state, rarity, case_id="clutch_case", value=1.0):
     return entry
 
 
+class RevalueTest(unittest.TestCase):
+    def _catalog(self):
+        return {"cases": [{"id": "c", "name": "C", "items": {"covert": [
+            {"id": "sk", "weapon": "AK-47", "skin": "Redline",
+             "prices": {"ft": 43.28, "st_ft": 90.0}}]}}],
+            "wear_tiers": [{"id": "ft", "name": "Field-Tested", "max": 0.38},
+                           {"id": "bs", "name": "Battle-Scarred", "max": 1.0}]}
+
+    def _held(self, stored_value, wear="ft", stattrak=False):
+        return {"uid": 1, "case_id": "c", "item": {"id": "sk", "weapon": "AK-47",
+                "skin": "Redline", "prices": {}}, "rarity": "covert",
+                "wear": {"id": wear, "name": wear}, "float": 0.2,
+                "stattrak": stattrak, "value": stored_value, "name": "AK-47 | Redline"}
+
+    def test_revalue_corrects_a_stale_stored_value(self):
+        state = economy.new_state()
+        state["inventory"] = [self._held(999.0)]   # wrong stored value
+        changed = economy.revalue_inventory(state, self._catalog())
+        self.assertEqual(changed, 1)
+        self.assertEqual(state["inventory"][0]["value"], 43.28)  # the real FT price
+
+    def test_revalue_adopts_the_current_catalog_prices(self):
+        state = economy.new_state()
+        state["inventory"] = [self._held(43.28)]   # value right, but item.prices empty
+        economy.revalue_inventory(state, self._catalog())
+        self.assertEqual(state["inventory"][0]["item"]["prices"]["ft"], 43.28)
+
+    def test_revalue_leaves_a_correct_value_untouched(self):
+        state = economy.new_state()
+        cat = self._catalog()
+        state["inventory"] = [{"uid": 1, "case_id": "c",
+            "item": cat["cases"][0]["items"]["covert"][0], "rarity": "covert",
+            "wear": {"id": "ft", "name": "Field-Tested"}, "float": 0.2,
+            "stattrak": False, "value": 43.28, "name": "AK-47 | Redline"}]
+        self.assertEqual(economy.revalue_inventory(state, cat), 0)
+
+    def test_revalue_keeps_the_embedded_item_for_an_unknown_skin(self):
+        state = economy.new_state()
+        held = self._held(5.0)
+        held["item"]["id"] = "not-in-catalog"
+        state["inventory"] = [held]
+        economy.revalue_inventory(state, self._catalog())  # must not raise
+        self.assertEqual(state["inventory"][0]["item"]["id"], "not-in-catalog")
+
+
 class EarningTest(unittest.TestCase):
     def test_add_earnings_accumulates(self):
         state = economy.new_state()

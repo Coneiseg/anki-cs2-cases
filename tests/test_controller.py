@@ -89,6 +89,24 @@ class ControllerTest(unittest.TestCase):
         self.assertIn("wear_tiers", payload)
         self.assertTrue(len(payload["cases"]) >= 1)
 
+    def test_inventory_is_revalued_to_the_catalog_on_load(self):
+        # a stored value that doesn't match the catalog gets corrected when the save
+        # is loaded, and the correction is persisted
+        self.ctrl.state["balance"] = 10.0
+        drop = self.ctrl.open_case("clutch_case")["drop"]
+        correct = drop["value"]
+        self.ctrl.state["inventory"][0]["value"] = correct + 500.0   # corrupt it
+        self.ctrl._save()
+        reloaded = controller.Controller(self.path, self.config, load_dataset())
+        self.assertEqual(reloaded.state["inventory"][0]["value"], correct)
+
+    def test_reload_catalog_revalues_inventory(self):
+        self.ctrl.state["balance"] = 10.0
+        self.ctrl.open_case("clutch_case")
+        self.ctrl.state["inventory"][0]["value"] = 99999.0
+        self.ctrl.reload_catalog(load_dataset())
+        self.assertLess(self.ctrl.state["inventory"][0]["value"], 99999.0)
+
 
 class GiftingControllerTest(unittest.TestCase):
     def setUp(self):
