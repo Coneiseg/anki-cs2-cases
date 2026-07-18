@@ -655,7 +655,7 @@
       // Hide the knife/glove identity during the scroll — CS2 shows a generic gold
       // "Rare Special Item" and only reveals what it is if you actually land on it.
       el.classList.add("special-hidden");
-      el.innerHTML = '<div class="art"><span class="goldstar">★</span></div>'
+      el.innerHTML = '<div class="art"><span class="goldstar" aria-label="Rare Special Item"></span></div>'
         + '<div class="bar"></div>'
         + '<div class="info"><div class="wpn">Rare Special</div><div class="skn">Item</div></div>';
       return el;
